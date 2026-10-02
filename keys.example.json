@@ -1,0 +1,14 @@
+[
+  {
+    "key_sha256": "<output of: python -m finrag.cli hash-key>",
+    "principal": "alice",
+    "tenant": "acme",
+    "roles": ["analyst"]
+  },
+  {
+    "key_sha256": "<another hash>",
+    "principal": "dora-dpo",
+    "tenant": "acme",
+    "roles": ["dpo"]
+  }
+]

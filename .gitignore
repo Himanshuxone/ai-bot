@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+# Secrets and data must never be committed   [RULE: SEC-SECRETS] [RULE: GDPR-ART32]
+.env
+keys.json
+data/
+*.enc
+audit.log
