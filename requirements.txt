@@ -1,0 +1,10 @@
+# Runtime dependencies (pin exact versions + hashes in production via pip-compile).
+anthropic>=1.11,<2
+cryptography>=44
+pydantic>=2.7,<3
+pydantic-settings>=2.3,<3
+pypdf>=5
+openpyxl>=3.1
+fastapi>=0.115
+uvicorn>=0.30
+python-multipart>=0.0.9
