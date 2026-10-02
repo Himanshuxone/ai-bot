@@ -3,7 +3,7 @@
 This document describes how FinRAG is built, how data flows through it, and where each
 security / privacy control sits. For the rule-by-rule mapping to code lines see
 [`COMPLIANCE_MATRIX.md`](COMPLIANCE_MATRIX.md); for the reasoning behind the controls see
-[`COMPLIANCE.md`](COMPLIANCE.md).
+[`COMPLIANCE.md`](COMPLIANCE.md). For UML diagrams that name the function and file behind every RAG step, see [`RAG_FLOW.md`](RAG_FLOW.md).
 
 ---
 
