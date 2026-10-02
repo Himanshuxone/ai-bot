@@ -105,7 +105,7 @@ flowchart LR
 ```
 
 The full design (component, sequence and key-management diagrams, trust boundaries) is in
-**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. For step-by-step UML and user-flow diagrams naming every function, see **[docs/RAG_FLOW.md](docs/RAG_FLOW.md)**.
 
 ---
 
@@ -267,6 +267,7 @@ Controls are tagged in comments, for example:
 
 | Document | What it gives you |
 |---|---|
+| [docs/RAG_FLOW.md](docs/RAG_FLOW.md) | UML class, activity and sequence diagrams plus a user flow, mapping every RAG step (chunking, vectorising, matching, LLM call) to its function and file |
 | [docs/COMPLIANCE.md](docs/COMPLIANCE.md) | Article-by-article explanation for GDPR, EU AI Act, PII standard, OWASP LLM Top 10, AppSec, plus the organisational measures you still need |
 | [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) | Generated table: every rule → every `file:line` that implements it |
 | [finrag/compliance/rules.py](finrag/compliance/rules.py) | Registry of rule IDs and their meanings |
@@ -314,7 +315,7 @@ finrag/
 └── governance/
     ├── gdpr.py             lawful basis, purposes, Art. 9, RoPA, exports
     └── transparency.py     AI disclosure, model card, output label
-docs/                       ARCHITECTURE, COMPLIANCE, COMPLIANCE_MATRIX
+docs/                       ARCHITECTURE, RAG_FLOW, COMPLIANCE, COMPLIANCE_MATRIX
 samples/                    synthetic financial data for demos
 scripts/compliance_report.py
 tests/                      pytest suite (71 tests)
