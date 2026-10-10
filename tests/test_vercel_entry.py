@@ -6,6 +6,7 @@ Runs in subprocesses so module state never leaks between scenarios.
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -47,6 +48,35 @@ def test_missing_master_key_gives_clear_503_without_leaking(tmp_path):
                          "FINRAG_DATA_DIR": str(tmp_path)})
     assert status == 503
     assert "FINRAG_MASTER_KEY must be set" in body and "docs/DEPLOY_VERCEL.md" in body
+
+
+def test_top_level_fastapi_app_is_visible_to_vercel():
+    """Vercel checks api/index.py statically for a top-level ``app = FastAPI(...)``."""
+    source = (ROOT / "api" / "index.py").read_text(encoding="utf-8")
+    assert re.search(r"^app\s*=\s*FastAPI\(", source, re.MULTILINE)
+    assert re.search(r"^from fastapi import FastAPI", source, re.MULTILINE)
+
+
+def test_ui_api_and_demo_work_through_the_wrapper(tmp_path):
+    script = SCRIPT.replace(
+        'response = client.get("/healthz")',
+        'redirect = client.get("/", follow_redirects=False)\n'
+        'assert redirect.status_code in (302, 307) and redirect.headers["location"] == "/ui/"\n'
+        'assert client.get("/ui/").status_code == 200\n'
+        'assert client.get("/ui/js/main.js").status_code == 200\n'
+        'token = client.post("/v1/demo/session").json()["api_key"]\n'
+        'docs = client.get("/v1/documents", headers={{"X-API-Key": token}}).json()\n'
+        'assert len(docs) == 3, docs\n'
+        'assert "script-src" in client.get("/ui/").headers["content-security-policy"]\n'
+        'response = client.get("/healthz")')
+    result = subprocess.run(
+        [sys.executable, "-c", script.format(path=ROOT / "api" / "index.py")],
+        env={"PATH": "/usr/bin:/bin:/usr/local/bin", "HOME": "/tmp",
+             "FINRAG_ENVIRONMENT": "production", "FINRAG_DEMO_MODE": "true",
+             "FINRAG_MASTER_KEY": GOOD_KEY, "FINRAG_DATA_DIR": str(tmp_path)},
+        capture_output=True, text=True, check=False, cwd="/tmp")
+    assert result.returncode == 0, result.stderr[-800:]
+    assert '"status": 200' in result.stdout
 
 
 def test_vercel_defaults_data_dir_to_tmp():

@@ -378,7 +378,7 @@ docs/                       ARCHITECTURE, RAG_FLOW, COMPLIANCE, COMPLIANCE_MATRI
 samples/                    synthetic financial data for demos
 scripts/compliance_report.py
 scripts/demo.py             local launcher with demo users for the web UI
-tests/                      pytest suite (109 tests)
+tests/                      pytest suite (111 tests)
 ```
 
 ---
@@ -386,7 +386,7 @@ tests/                      pytest suite (109 tests)
 ## Testing
 
 ```bash
-pytest -q          # 109 tests, no network needed (Claude is mocked)
+pytest -q          # 111 tests, no network needed (Claude is mocked)
 ruff check finrag tests scripts
 ```
 
