@@ -20,15 +20,13 @@ plain HTTP to the internet.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 
-from finrag import demo
+from finrag import assets, demo
 from finrag.config import get_settings
 from finrag.generation.llm import LLMUnavailableError
 from finrag.governance import gdpr, transparency
@@ -96,7 +94,7 @@ async def security_middleware(request: Request, call_next):  # type: ignore[no-u
     if request.url.path.startswith("/ui"):
         response.headers["Content-Security-Policy"] = (
             "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
-            "connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'none'; "
+            "connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; "
             "form-action 'none'; frame-ancestors 'none'")
     else:
         response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
@@ -330,13 +328,46 @@ def ropa(principal: PrincipalDep) -> dict[str, object]:
 
 
 # ------------------------------------------------------------------- web UI
-WEB_DIR = Path(__file__).parent / "web"
+if settings.web_ui and (assets.web_dir() is not None or assets.embedded_web_available()):
+    def _ui_file(rel: str) -> Response:
+        """Return one UI file from disk, or from the copy embedded in finrag/_assets.py.
 
-if settings.web_ui and WEB_DIR.is_dir():
+        Some serverless hosts package only Python modules, so the embedded copy is the
+        fallback. [RULE: SEC-FILE-UPLOAD] Only exact, known names are served.
+        """
+        data: bytes | None = None
+        folder = assets.web_dir()
+        if folder is not None:
+            target = (folder / rel).resolve()
+            if target.is_file() and target.is_relative_to(folder.resolve()):
+                data = target.read_bytes()
+        else:
+            data = assets.embedded_web_file(rel)
+        if data is None:
+            raise HTTPException(status_code=404, detail="not found")
+        return Response(data, media_type=assets.media_type(rel))
+
     # [RULE: SEC-HEADERS] Served with the UI-specific CSP set in the middleware.
-    app.mount("/ui", StaticFiles(directory=WEB_DIR, html=True), name="ui")
+    # "/ui" and "/ui/" both serve the page directly (no redirect between them): some hosts
+    # normalise the trailing slash themselves, and a redirect here would then loop.
+    @app.get("/ui", include_in_schema=False)
+    def ui_index_bare() -> Response:
+        """Serve the web app at /ui."""
+        return _ui_file("index.html")
 
+    @app.get("/ui/{path:path}", include_in_schema=False)
+    def ui_file(path: str) -> Response:
+        """Serve the web app at /ui/ and its static files."""
+        return _ui_file(path or "index.html")
+
+
+if settings.web_ui and (assets.web_dir() is not None or assets.embedded_web_available()):
     @app.get("/", include_in_schema=False)
     def root() -> RedirectResponse:
         """Send browsers to the web app."""
         return RedirectResponse("/ui/")
+else:
+    @app.get("/", include_in_schema=False)
+    def root_info() -> dict[str, str]:
+        """Say what this service is when the web UI is switched off or unavailable."""
+        return {"service": "finrag", "ui": "disabled or not packaged", "health": "/healthz"}

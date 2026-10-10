@@ -108,6 +108,24 @@ class Settings(BaseSettings):
     # [RULE: SEC-AUTHN] Path to a JSON file of hashed API keys (see README).
     api_keys_file: Path | None = None
 
+    @field_validator("*", mode="before")
+    @classmethod
+    def _tidy_text(cls, value: object) -> object:
+        # [RULE: SEC-INPUT-VALIDATION] Environment variables often arrive with a trailing
+        # carriage return / space or wrapped in quotes (typed or pasted on Windows, or set
+        # in a hosting dashboard). Strip those so a harmless slip does not stop the app.
+        if isinstance(value, str):
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1].strip()
+        return value
+
+    @field_validator("environment", "llm_provider", mode="before")
+    @classmethod
+    def _case_insensitive_choice(cls, value: object) -> object:
+        # "Production" and "production" mean the same thing.
+        return value.lower() if isinstance(value, str) else value
+
     @field_validator("anthropic_effort")
     @classmethod
     def _valid_effort(cls, value: str) -> str:
