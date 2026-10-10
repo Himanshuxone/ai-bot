@@ -47,6 +47,45 @@ async def entry_alias() -> RedirectResponse:
     return RedirectResponse("/ui/")
 
 
+class PathGuard:
+    """Normalise the request path and report what the platform actually sent.
+
+    Some hosts hand a rewritten function the *function's* address instead of the browser's
+    address. Every route would then miss and the app would answer 404 for everything. This
+    removes a leading ``/api/index`` prefix, and adds ``X-Finrag-Path`` (the path as the app
+    saw it, before and after) so a mismatch can be diagnosed with a plain ``curl -I``.
+    The values are only the request path; nothing secret.
+    """
+
+    PREFIX = "/api/index"
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.inner(scope, receive, send)
+            return
+        seen = scope.get("path", "")
+        path = seen
+        if path.startswith(self.PREFIX + "/"):
+            path = path[len(self.PREFIX):]
+            scope = dict(scope, path=path, raw_path=path.encode())
+        note = f"seen={seen!r} used={path!r} root={scope.get('root_path', '')!r}"
+
+        async def tagged(message):
+            if message["type"] == "http.response.start":
+                message = dict(message)
+                message["headers"] = [*message.get("headers", []),
+                                      (b"x-finrag-path", note.encode("ascii", "replace"))]
+            await send(message)
+
+        await self.inner(scope, receive, tagged)
+
+
+app.add_middleware(PathGuard)
+
+
 def _describe(exc: Exception) -> str:
     """Short, safe description of a startup failure: names variables, never values."""
     errors = getattr(exc, "errors", None)
