@@ -35,6 +35,16 @@
         </div>
       </div>
 
+      <!-- Shown only when the server runs in public demo mode (GET /v1/demo). -->
+      <div id="demo-box" class="section" hidden>
+        <div class="banner warning" role="note">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <div id="demo-note"></div>
+        </div>
+        <button class="btn btn-primary" type="button" id="demo-start">Try the demo with sample documents</button>
+        <p class="help" id="demo-or">Or sign in with an API key:</p>
+      </div>
+
       <div class="field">
         <label for="api-key">API key <span class="req" aria-hidden="true">*</span></label>
         <div class="input-with-button">

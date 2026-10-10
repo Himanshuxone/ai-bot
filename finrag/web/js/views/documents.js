@@ -67,7 +67,11 @@ export function renderDocuments(root, ctx) {
         art9Details),
       h("div", { class: "actions" }, submit));
 
-    view.append(h("div", { class: "section" }, h("h2", { text: "Upload" }), form));
+    view.append(h("div", { class: "section" }, h("h2", { text: "Upload" }),
+      ctx.me.demo ? h("div", { class: "banner warning", role: "note" }, icon("warn"),
+        h("div", {}, h("strong", { text: "Public demo: use synthetic data only" }),
+          "Your workspace is temporary and separate from other visitors, but do not upload real personal or confidential files.")) : null,
+      form));
 
     // ---- queue handling
     const setFileError = (msg) => { clear(fileError); if (msg) fileError.append(icon("xcircle"), document.createTextNode(msg)); fileError.hidden = !msg; };

@@ -1,0 +1,13 @@
+tests/
+docs/
+scripts/
+samples/
+data/
+.github/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+.env
+keys.json
+Dockerfile

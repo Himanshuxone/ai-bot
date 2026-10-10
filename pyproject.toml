@@ -30,7 +30,7 @@ finrag = "finrag.cli:main"
 include = ["finrag*"]
 
 [tool.setuptools.package-data]
-finrag = ["web/*", "web/js/*", "web/js/views/*"]
+finrag = ["web/*", "web/js/*", "web/js/views/*", "demo_data/*"]
 
 [tool.ruff]
 line-length = 100

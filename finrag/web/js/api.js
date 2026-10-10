@@ -76,6 +76,8 @@ async function request(path, { method = "GET", json, form, timeoutMs = 130000, t
 
 export const api = {
   me: () => request("/v1/me"),
+  demoInfo: () => request("/v1/demo", { auth: false }),
+  demoSession: () => request("/v1/demo/session", { method: "POST", auth: false }),
   transparency: () => request("/v1/transparency", { auth: false }),
   query: (question, reidentify) => request("/v1/query", { method: "POST", json: { question, reidentify } }),
   listDocuments: () => request("/v1/documents"),

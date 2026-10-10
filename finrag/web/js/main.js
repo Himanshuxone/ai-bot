@@ -159,7 +159,7 @@ function showShell(me) {
     : "Excerpts with personal data masked are sent to the AI provider to write answers.";
   const who = clear($("who"));
   who.append(h("div", { text: me.principal }),
-    h("div", { class: "muted", text: `${me.tenant} · ${me.roles.join(", ") || "no role"}` }));
+    h("div", { class: "muted", text: me.demo ? "Demo workspace · temporary" : `${me.tenant} · ${me.roles.join(", ") || "no role"}` }));
   setButton($("signout"), "logout");
   buildNav();
   route();
@@ -187,6 +187,47 @@ function showLoginError(message) {
   $("api-key").setAttribute("aria-invalid", "true");
 }
 
+async function signInWith(key, input) {
+  setKey(key);
+  state.loggingIn = true; // a wrong key here is reported inline, keeping what was typed
+  try {
+    showShell(await api.me());
+  } catch (err) {
+    setKey(null);
+    showLoginError(err.message);
+    input.focus();
+  } finally {
+    state.loggingIn = false;
+  }
+}
+
+/** Offer the one-click demo when the server runs in public demo mode. */
+async function initDemo() {
+  let info;
+  try { info = await api.demoInfo(); } catch { return; }
+  if (!info.enabled) return;
+  const hours = Math.round((info.session_minutes / 60) * 10) / 10;
+  const note = clear($("demo-note"));
+  note.append(h("strong", { text: "Public demo" }),
+    `Your private workspace comes with three synthetic sample documents (CSV, Markdown and Excel) and lasts about ${hours} hours. `,
+    "Do not upload real personal or confidential data. Answers are quoted from the documents; no outside AI service is used.");
+  $("demo-box").hidden = false;
+  const start = $("demo-start");
+  start.addEventListener("click", async () => {
+    start.disabled = true;
+    clear(start).append(icon("loader", { spin: true }), document.createTextNode("Preparing your workspace\u2026"));
+    try {
+      const { api_key: key } = await api.demoSession();
+      await signInWith(key, $("api-key"));
+    } catch (err) {
+      showLoginError(err.message);
+    } finally {
+      start.disabled = false;
+      start.textContent = "Try the demo with sample documents";
+    }
+  });
+}
+
 function initLogin() {
   const input = $("api-key");
   const toggle = $("toggle-key");
@@ -210,19 +251,9 @@ function initLogin() {
     submit.disabled = true;
     setButton(submit, null, "");
     submit.append(icon("loader", { spin: true }), document.createTextNode("Signing in…"));
-    setKey(key);
-    state.loggingIn = true; // a wrong key here is reported inline, keeping what was typed
-    try {
-      showShell(await api.me());
-    } catch (err) {
-      setKey(null);
-      showLoginError(err.message);
-      input.focus();
-    } finally {
-      state.loggingIn = false;
-      submit.disabled = false;
-      submit.textContent = "Sign in";
-    }
+    await signInWith(key, input);
+    submit.disabled = false;
+    submit.textContent = "Sign in";
   });
 }
 
@@ -230,6 +261,7 @@ function initLogin() {
 async function boot() {
   initTheme();
   initLogin();
+  initDemo();
   $("signout").addEventListener("click", () => signOut());
   setUnauthorisedHandler(() => {
     if (!state.loggingIn) signOut("Your key was not accepted or has expired. Sign in again.");

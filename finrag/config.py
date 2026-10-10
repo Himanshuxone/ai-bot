@@ -17,7 +17,7 @@ from enum import Enum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -96,6 +96,14 @@ class Settings(BaseSettings):
     # data itself, but operators can switch it off for API-only deployments.
     web_ui: bool = True
 
+    # ------------------------------------------------------------- public demo
+    # [RULE: GDPR-ART25] Demo mode gives every visitor a private, temporary workspace
+    # with synthetic sample documents. It is meant for public showcases (for example a
+    # serverless deployment) and is off by default.
+    demo_mode: bool = False
+    demo_session_minutes: int = 120
+    demo_max_workspaces: int = 40
+
     # -------------------------------------------------------------- API auth
     # [RULE: SEC-AUTHN] Path to a JSON file of hashed API keys (see README).
     api_keys_file: Path | None = None
@@ -108,6 +116,14 @@ class Settings(BaseSettings):
         if value not in allowed:
             raise ValueError(f"anthropic_effort must be one of {sorted(allowed)}")
         return value
+
+    @model_validator(mode="after")
+    def _demo_is_offline(self) -> "Settings":
+        # [RULE: GDPR-ART44] [RULE: OWASP-LLM10] A public demo never calls an external AI
+        # provider: no visitor content leaves the host and nobody can run up API costs.
+        if self.demo_mode and self.llm_provider is not LLMProvider.OFFLINE:
+            raise ValueError("demo_mode requires llm_provider=offline")
+        return self
 
     @property
     def is_production(self) -> bool:

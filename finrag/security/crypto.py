@@ -63,6 +63,7 @@ class KeyRing:
     vault_key: bytes  # encrypts the pseudonym -> original-value vault
     pseudonym_key: bytes  # HMAC key for deterministic PII tokens
     audit_key: bytes  # HMAC key for the tamper-evident audit chain
+    demo_key: bytes  # HMAC key that signs stateless demo session tokens
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "KeyRing":
@@ -91,6 +92,7 @@ class KeyRing:
             vault_key=_derive(master, "vault"),
             pseudonym_key=_derive(master, "pseudonym"),
             audit_key=_derive(master, "audit"),
+            demo_key=_derive(master, "demo"),
         )
 
 

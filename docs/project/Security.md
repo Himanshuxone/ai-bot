@@ -172,6 +172,17 @@ Rules for contributors (and agents) when editing security code:
 4. Tag a new control with `[RULE: ID]` and register the ID if it is new.
 5. Fail closed: when unsure, deny and audit.
 
+### Public demo mode
+
+`FINRAG_DEMO_MODE=true` (used for the Vercel demo) adds an unauthenticated
+`POST /v1/demo/session` that creates a new isolated tenant and returns a signed,
+expiring token. Controls: one tenant per visitor (`OWASP-LLM08`), HMAC-signed tokens with
+expiry compared in constant time (`SEC-AUTHN`), signing key derived from the master key
+(`SEC-CRYPTO`), forced offline generator so no content leaves the host (`GDPR-ART44`),
+session creation rate limit and a cap on stored workspaces (`OWASP-LLM10`). Residual
+risks: tokens are bearer secrets valid until expiry; per-instance counters mean the rate
+limit is not global; the demo has no persistent store and must not be used with real data.
+
 ## 9. Operations
 
 **Hardening checklist** (production):

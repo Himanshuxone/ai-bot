@@ -28,12 +28,14 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from finrag import demo
 from finrag.config import get_settings
 from finrag.generation.llm import LLMUnavailableError
 from finrag.governance import gdpr, transparency
 from finrag.ingestion.loaders import UnsupportedDocumentError
 from finrag.pipeline import FinRAGPipeline, RateLimitExceeded
-from finrag.security.access import AccessDenied, APIKeyAuthenticator, Permission, Principal
+from finrag.security.access import (AccessDenied, APIKeyAuthenticator, Permission, Principal,
+                                    RateLimiter)
 
 logger = logging.getLogger("finrag.api")
 settings = get_settings()
@@ -52,12 +54,19 @@ pipeline = FinRAGPipeline(settings)
 
 if settings.api_keys_file:
     authenticator = APIKeyAuthenticator.from_file(settings.api_keys_file)
-elif settings.is_production:
+elif settings.is_production and not settings.demo_mode:
     # [RULE: SEC-AUTHN] Fail closed: production without credentials config.
     raise RuntimeError("FINRAG_API_KEYS_FILE must be configured in production")
 else:
     authenticator = APIKeyAuthenticator([])  # dev: every request is rejected
     logger.warning("No API keys configured; all authenticated endpoints will return 401.")
+
+# Public demo mode: per-visitor temporary workspaces (see finrag/demo.py).
+demo_auth = (demo.DemoAuthenticator(pipeline.keys.demo_key, settings.demo_session_minutes)
+             if settings.demo_mode else None)
+# [RULE: OWASP-LLM10] Limit how fast new demo workspaces can be created.
+_demo_session_limiter = RateLimiter(20)
+_seeded_workspaces: set[str] = set()  # workspaces already seeded by this instance
 
 
 # ----------------------------------------------------------------- middleware
@@ -130,6 +139,14 @@ async def _unhandled(_: Request, exc: Exception) -> JSONResponse:
 def get_principal(x_api_key: Annotated[str | None, Header()] = None) -> Principal:
     """Authenticate the caller from the ``X-API-Key`` header."""
     principal = authenticator.authenticate(x_api_key)
+    if principal is None and demo_auth is not None:
+        principal = demo_auth.authenticate(x_api_key)
+        if principal is not None and principal.tenant not in _seeded_workspaces:
+            # Serverless instances come and go: restore the samples if this instance has
+            # never seen the workspace (or its temporary disk was recycled).
+            if not pipeline._ctx(principal.tenant).store.documents:
+                demo.seed_samples(pipeline, principal)
+            _seeded_workspaces.add(principal.tenant)
     if principal is None:
         raise HTTPException(status_code=401, detail="unauthorised")
     return principal
@@ -176,6 +193,7 @@ def me(principal: PrincipalDep) -> dict[str, object]:
         "permissions": sorted(p.value for p in principal.permissions),
         "provider": settings.llm_provider.value,
         "model": pipeline.generator.model_name,
+        "demo": demo_auth is not None and principal.tenant.startswith("demo-"),
         "options": {
             "lawful_bases": [b.value for b in gdpr.LawfulBasis],
             "purposes": [p.value for p in gdpr.Purpose],
@@ -186,6 +204,33 @@ def me(principal: PrincipalDep) -> dict[str, object]:
             "default_retention_days": settings.default_retention_days,
         },
     }
+
+
+@app.get("/v1/demo")
+def demo_info() -> dict[str, object]:
+    """Tell the web UI whether the public demo is available. Public by design."""
+    return {"enabled": demo_auth is not None,
+            "session_minutes": settings.demo_session_minutes}
+
+
+@app.post("/v1/demo/session")
+def demo_session() -> dict[str, object]:
+    """Start a private demo workspace with sample documents and return its session key.
+
+    [RULE: OWASP-LLM08] Each call creates a new isolated workspace.
+    [RULE: OWASP-LLM10] Rate limited; old workspaces are pruned.
+    """
+    if demo_auth is None:
+        raise HTTPException(status_code=404, detail="not found")
+    if not _demo_session_limiter.allow("sessions"):
+        raise RateLimitExceeded("too many demo sessions")
+    token = demo_auth.issue()
+    principal = demo_auth.authenticate(token)
+    assert principal is not None
+    demo.prune_workspaces(pipeline, settings.demo_max_workspaces)
+    demo.seed_samples(pipeline, principal)
+    _seeded_workspaces.add(principal.tenant)
+    return {"api_key": token, "expires_in": demo_auth.ttl_seconds}
 
 
 @app.get("/v1/transparency")

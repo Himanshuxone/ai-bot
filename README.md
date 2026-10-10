@@ -135,7 +135,8 @@ and answers quote the most relevant lines from your documents. For written answe
 FINRAG_LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=... python scripts/demo.py
 ```
 
-The header badge shows the current mode. The demo launcher is for local use only; for
+The header badge shows the current mode. A public, per-visitor demo can be deployed on Vercel: see
+[docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md). The demo launcher is for local use only; for
 production see [SECURITY.md](SECURITY.md) and set `FINRAG_WEB_UI=false` if you want an
 API-only deployment.
 
@@ -322,6 +323,7 @@ Controls are tagged in comments, for example:
 |---|---|
 | [docs/project/](docs/project/) | Project documents: [PRD](docs/project/PRD.md), [Design System](docs/project/Design_System.md), [Architecture](docs/project/Architecture.md), [Security](docs/project/Security.md), [Code Style](docs/project/CODE_STYLE.md), [Testing](docs/project/Testing.md), [Agents](docs/project/Agents.md) |
 | [docs/project/Design_System.md](docs/project/Design_System.md) | Design principles, tokens and component rules behind the web UI |
+| [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md) | Deploying the public demo on Vercel: files, environment variables, limits |
 | [docs/RAG_FLOW.md](docs/RAG_FLOW.md) | UML class, activity and sequence diagrams plus a user flow, mapping every RAG step (chunking, vectorising, matching, LLM call) to its function and file |
 | [docs/COMPLIANCE.md](docs/COMPLIANCE.md) | Article-by-article explanation for GDPR, EU AI Act, PII standard, OWASP LLM Top 10, AppSec, plus the organisational measures you still need |
 | [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) | Generated table: every rule → every `file:line` that implements it |
@@ -351,6 +353,7 @@ finrag/
 ├── pipeline.py             orchestrator: ingest / ask / erase / export / purge
 ├── api.py                  FastAPI server
 ├── cli.py                  command-line interface
+├── demo.py                 public demo mode: per-visitor workspaces and sample data
 ├── web/                    browser UI: index.html, styles.css, js/ (no build step)
 ├── compliance/rules.py     rule registry (GDPR, EU AI Act, OWASP, SEC, PII, FIN)
 ├── security/
@@ -375,7 +378,7 @@ docs/                       ARCHITECTURE, RAG_FLOW, COMPLIANCE, COMPLIANCE_MATRI
 samples/                    synthetic financial data for demos
 scripts/compliance_report.py
 scripts/demo.py             local launcher with demo users for the web UI
-tests/                      pytest suite (97 tests)
+tests/                      pytest suite (106 tests)
 ```
 
 ---
@@ -383,7 +386,7 @@ tests/                      pytest suite (97 tests)
 ## Testing
 
 ```bash
-pytest -q          # 97 tests, no network needed (Claude is mocked)
+pytest -q          # 106 tests, no network needed (Claude is mocked)
 ruff check finrag tests scripts
 ```
 
