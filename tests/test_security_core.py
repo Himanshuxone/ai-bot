@@ -48,3 +48,9 @@ def test_rate_limiter():
 def test_tenant_validation(tenant):
     with pytest.raises(ValueError):
         validate_tenant(tenant)
+
+
+@pytest.mark.parametrize("raw", ["production", "Production", "production\r", '"production"', " production "])
+def test_settings_tolerate_harmless_formatting(raw, tmp_path):
+    # [RULE: SEC-INPUT-VALIDATION]
+    assert Settings(environment=raw, data_dir=tmp_path).environment is Environment.PRODUCTION

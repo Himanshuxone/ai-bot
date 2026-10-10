@@ -39,12 +39,29 @@ if os.environ.get("VERCEL"):
 # Top-level FastAPI instance: required by Vercel's static entrypoint detection.
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
+def _describe(exc: Exception) -> str:
+    """Short, safe description of a startup failure: names variables, never values."""
+    errors = getattr(exc, "errors", None)
+    if callable(errors):  # pydantic ValidationError from the settings
+        try:
+            parts = []
+            for item in errors():
+                location = ".".join(str(p) for p in item.get("loc", ()))
+                name = f"FINRAG_{location.upper()}" if location else "settings"
+                # Only the rule that failed ("msg"), never the offending input value.
+                parts.append(f"{name}: {item.get('msg', 'invalid')}")
+            return ("Invalid settings: " + "; ".join(parts))[:400]
+        except Exception:  # fall back to the generic description below
+            pass
+    first_line = str(exc).splitlines()[0][:200] if str(exc) else ""
+    return f"{type(exc).__name__}: {first_line}"
+
+
 try:
     from finrag.api import app as _finrag_app
 except Exception as exc:  # startup failure: report it clearly instead of crashing
     traceback.print_exc()  # full details go to Vercel's function logs
-    _first_line = str(exc).splitlines()[0][:200] if str(exc) else ""
-    _reason = f"{type(exc).__name__}: {_first_line}"
+    _reason = _describe(exc)
 
     @app.api_route("/{path:path}",
                    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])

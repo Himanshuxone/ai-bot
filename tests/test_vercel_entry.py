@@ -50,6 +50,21 @@ def test_missing_master_key_gives_clear_503_without_leaking(tmp_path):
     assert "FINRAG_MASTER_KEY must be set" in body and "docs/DEPLOY_VERCEL.md" in body
 
 
+def test_invalid_setting_names_the_variable_but_not_its_value(tmp_path):
+    status, body = _run({"FINRAG_ENVIRONMENT": "production", "FINRAG_DEMO_MODE": "true",
+                         "FINRAG_MASTER_KEY": GOOD_KEY, "FINRAG_DATA_DIR": str(tmp_path),
+                         "FINRAG_MAX_UPLOAD_BYTES": "not-a-number-xyz"})
+    assert status == 503
+    assert "FINRAG_MAX_UPLOAD_BYTES" in body and "not-a-number-xyz" not in body
+
+
+def test_tolerates_stray_whitespace_quotes_and_capitals(tmp_path):
+    status, _ = _run({"FINRAG_ENVIRONMENT": '"Production"\r', "FINRAG_DEMO_MODE": "True ",
+                      "FINRAG_MASTER_KEY": GOOD_KEY + "\r\n", "FINRAG_DATA_DIR": str(tmp_path),
+                      "FINRAG_MAX_UPLOAD_BYTES": " 2097152\r"})
+    assert status == 200
+
+
 def test_top_level_fastapi_app_is_visible_to_vercel():
     """Vercel checks api/index.py statically for a top-level ``app = FastAPI(...)``."""
     source = (ROOT / "api" / "index.py").read_text(encoding="utf-8")

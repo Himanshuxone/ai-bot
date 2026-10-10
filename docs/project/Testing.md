@@ -1,7 +1,7 @@
 # Testing: FinRAG
 
 Strategy, current coverage, how to run the tests, and the gaps. Numbers below were
-checked against the repository when this document was written: **111 tests, all passing** (3 of them are browser tests that skip themselves when Playwright or Chromium is unavailable).
+checked against the repository when this document was written: **118 tests, all passing** (3 of them are browser tests that skip themselves when Playwright or Chromium is unavailable).
 
 Related: [PRD](PRD.md) · [Security](Security.md) · [Code Style](CODE_STYLE.md) · [Agents](Agents.md)
 
@@ -42,15 +42,15 @@ Typical run time is a few seconds.
 | `tests/test_guardrails.py` | 14 | Injection blocking (including zero-width obfuscation), prohibited and high-risk requests, normal questions allowed, advice flagged, length limit, indirect-injection screening, canary leak, invalid citations, unverified numbers, output PII redaction, number normalisation |
 | `tests/test_loaders.py` | 9 | Filename sanitising, extension allow-list, fake PDF, size limit, binary text, macro workbook, zip bomb, formulas not evaluated, table chunks repeat the header |
 | `tests/test_pipeline.py` | 19 | End-to-end ingest and ask with citations; no raw PII on disk; pseudonymised answers and DPO-only re-identification; question PII maps to tokens; lawful basis, purpose and consent rules; Art. 9 condition; RBAC; tenant isolation; quarantined injection; erasure; export; retention purge; deletion; duplicate upload; audit chain and scrubbing; tampered store fails closed; unverified figures trigger review; prompt-leak withheld; no context skips the LLM |
-| `tests/test_security_core.py` | 10 | Production requires a master key, short key rejected, tamper detection, API-key auth, rate limiter, tenant-id validation |
+| `tests/test_security_core.py` | 15 | Production requires a master key, short key rejected, tamper detection, API-key auth, rate limiter, tenant-id validation |
 | `tests/test_api.py` | 6 | 401 without or with a wrong key, security headers, public transparency endpoint, upload then query, viewer cannot upload (403), bad file rejected (422) |
 | `tests/test_llm.py` | 2 | Request shape sent to the Anthropic SDK (model, system prompt, adaptive thinking, fallbacks, no tools, fenced sources) and refusal handling, using a fake client |
 | `tests/test_web.py` | 23 | UI files served and `/` redirect; strict UI CSP while the API keeps `default-src 'none'`; `/v1/me` requires a key and reflects role permissions; UI can be disabled; static scan of every JS file for forbidden patterns (`innerHTML`, `eval`, inline styles, sensitive data in `localStorage`); `index.html` has no inline code or third-party hosts and zoom is not disabled; JS syntax valid |
 | `tests/test_ui_e2e.py` | 3 | Real browser (Playwright, Chromium): wrong key rejected inline; analyst signs in, GDPR fields validated, uploads a CSV, asks, opens a citation, injection attempt is blocked, no console errors; viewer sees only Ask and About |
 | `tests/test_demo.py` | 9 | Demo tokens (round trip, tampering, expiry, wrong key, junk); demo mode refuses an external AI provider; a session gives a private workspace with the three samples and masked personal data; visitors cannot see each other's uploads; samples restored after an instance recycle; old workspaces pruned; endpoints inert when disabled; works in production mode without a keys file |
-| `tests/test_vercel_entry.py` | 5 | `api/index.py` exposes a top-level `app = FastAPI(...)` (Vercel checks this statically); the UI, redirect, CSP and demo session work through the wrapper; it starts with demo settings; a missing master key yields a clear HTTP 503 explaining the problem without leaking values; on Vercel the data folder defaults to `/tmp` (each scenario runs in a fresh subprocess) |
+| `tests/test_vercel_entry.py` | 7 | `api/index.py` exposes a top-level `app = FastAPI(...)` (Vercel checks this statically); the UI, redirect, CSP and demo session work through the wrapper; it starts with demo settings; a missing master key yields a clear HTTP 503 explaining the problem without leaking values; on Vercel the data folder defaults to `/tmp` (each scenario runs in a fresh subprocess) |
 | `tests/test_compliance_tags.py` | 3 | Every `[RULE: …]` tag is registered, every registered rule has an implementation tag, `docs/COMPLIANCE_MATRIX.md` is current |
-| **Total** | **111** | |
+| **Total** | **118** | |
 
 Shared fixtures are in `tests/conftest.py`: `settings` (temp data dir, fresh master key,
 high rate limit), `pipeline` (offline generator), the principals `analyst`, `dpo`,
