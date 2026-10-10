@@ -23,7 +23,7 @@ import logging
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
 
 from finrag import assets, demo
@@ -91,7 +91,7 @@ async def security_middleware(request: Request, call_next):  # type: ignore[no-u
     # The JSON API gets the strictest policy. The browser UI (static files under
     # /ui) may load only same-origin scripts, styles and images: no inline code,
     # no third-party hosts, no framing (also limits XSS impact on the API key).
-    if request.url.path.startswith("/ui"):
+    if request.url.path == "/" or request.url.path.startswith("/ui"):
         response.headers["Content-Security-Policy"] = (
             "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
             "connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; "
@@ -363,9 +363,13 @@ if settings.web_ui and (assets.web_dir() is not None or assets.embedded_web_avai
 
 if settings.web_ui and (assets.web_dir() is not None or assets.embedded_web_available()):
     @app.get("/", include_in_schema=False)
-    def root() -> RedirectResponse:
-        """Send browsers to the web app."""
-        return RedirectResponse("/ui/")
+    def root() -> Response:
+        """Serve the web app at the site root.
+
+        No redirect at all: a hosting layer that rewrites slashes or paths can then never
+        put the browser into a redirect loop. Assets load through ``<base href="/ui/">``.
+        """
+        return _ui_file("index.html")
 else:
     @app.get("/", include_in_schema=False)
     def root_info() -> dict[str, str]:

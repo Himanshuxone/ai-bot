@@ -75,8 +75,8 @@ def test_top_level_fastapi_app_is_visible_to_vercel():
 def test_ui_api_and_demo_work_through_the_wrapper(tmp_path):
     script = SCRIPT.replace(
         'response = client.get("/healthz")',
-        'redirect = client.get("/", follow_redirects=False)\n'
-        'assert redirect.status_code in (302, 307) and redirect.headers["location"] == "/ui/"\n'
+        'root = client.get("/", follow_redirects=False)\n'
+        'assert root.status_code == 200 and "location" not in root.headers\n'
         'assert client.get("/ui/").status_code == 200\n'
         'assert client.get("/ui/js/main.js").status_code == 200\n'
         'token = client.post("/v1/demo/session").json()["api_key"]\n'

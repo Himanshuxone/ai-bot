@@ -22,7 +22,7 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 c = TestClient(module.app)
 r = c.get("/", follow_redirects=False)
-assert r.status_code in (302, 307) and r.headers["location"] == "/ui/", r.status_code
+assert r.status_code == 200 and "FinRAG" in r.text and "location" not in r.headers, r.status_code
 page = c.get("/ui/")
 assert page.status_code == 200 and "text/html" in page.headers["content-type"], page.status_code
 assert "FinRAG" in page.text

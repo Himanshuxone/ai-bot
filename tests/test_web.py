@@ -51,9 +51,11 @@ def client(tmp_path, monkeypatch):
     config.get_settings.cache_clear()
 
 
-def test_root_redirects_to_ui_and_files_are_served(client):
+def test_root_serves_the_app_without_redirects_and_files_are_served(client):
     response = client.get("/", follow_redirects=False)
-    assert response.status_code in (302, 307) and response.headers["location"] == "/ui/"
+    assert response.status_code == 200 and "<base href=\"/ui/\">" in response.text
+    assert "location" not in response.headers
+    assert "script-src 'self'" in response.headers["content-security-policy"]
     page = client.get("/ui/")
     assert page.status_code == 200 and "text/html" in page.headers["content-type"]
     bare = client.get("/ui", follow_redirects=False)  # must not redirect (host slash loops)
