@@ -31,6 +31,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import shutil
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -43,12 +44,12 @@ from finrag.generation.prompts import SYSTEM_CANARY, PromptSource
 from finrag.governance import gdpr, transparency
 from finrag.ingestion.chunker import chunk_sections
 from finrag.ingestion.loaders import UnsupportedDocumentError, load_document
+from finrag.retrieval.store import ChunkRecord, DocumentRecord, TenantStore, validate_tenant
 from finrag.security import guardrails
 from finrag.security.access import AccessDenied, Permission, Principal, RateLimiter
 from finrag.security.audit import AuditLog
 from finrag.security.crypto import DecryptionError, Encryptor, KeyRing
 from finrag.security.pii import PIIDetector, Pseudonymiser, PseudonymVault, redact
-from finrag.retrieval.store import ChunkRecord, DocumentRecord, TenantStore
 
 logger = logging.getLogger(__name__)
 
@@ -462,6 +463,17 @@ class FinRAGPipeline:
         self.audit.record("purge_expired", principal.principal_id, principal.tenant,
                           purged=purged)
         return purged
+
+    def purge_tenant(self, tenant: str) -> None:
+        """Delete everything stored for one tenant (used to expire demo workspaces).
+
+        [RULE: GDPR-ART17]   Erasure of all of a workspace's data.
+        [RULE: GDPR-ART5-1E] Storage limitation for temporary workspaces.
+        """
+        validate_tenant(tenant)  # [RULE: SEC-FILE-UPLOAD] no path traversal
+        self._tenants.pop(tenant, None)
+        shutil.rmtree(self.data_dir / "tenants" / tenant, ignore_errors=True)
+        self.audit.record("purge_tenant", "system", tenant)
 
     # ------------------------------------------------- data-subject rights
     def _subject_tokens(self, ctx: _TenantContext, identifier: str) -> list[str]:

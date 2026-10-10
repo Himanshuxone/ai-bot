@@ -31,6 +31,7 @@ relevant source lines instead of a written answer.)*
 ## Contents
 
 - [Features](#features)
+- [Web app](#web-app)
 - [Architecture at a glance](#architecture-at-a-glance)
 - [Quick start](#quick-start)
 - [Using the CLI](#using-the-cli)
@@ -88,6 +89,59 @@ relevant source lines instead of a written answer.)*
 
 ---
 
+## Web app
+
+A browser UI is built in: upload documents in different formats and ask questions in
+plain language. Start it with demo users in one command:
+
+```bash
+python scripts/demo.py            # then open http://127.0.0.1:8000/
+```
+
+The launcher creates a master key and three demo API keys under `data/demo/` (analyst,
+viewer, DPO), prints them, and starts the server. Paste one key on the sign-in screen.
+Upload `samples/sample_financials.csv` and `samples/board_notes.md`, choose a lawful basis
+and purpose, then ask "What was net income in FY2024?".
+
+| | |
+|---|---|
+| ![Ask screen](docs/images/ui-ask.png) | ![Documents screen](docs/images/ui-documents.png) |
+| ![Dark theme](docs/images/ui-ask-dark.png) | ![Mobile layout](docs/images/ui-mobile.png) |
+
+What the UI does:
+
+- **Upload** PDF, XLSX, CSV, TXT and Markdown, several files at once, by drag and drop or
+  file picker. It asks for the GDPR lawful basis, purpose, retention period and, when
+  needed, a consent reference or Art. 9(2) condition, and shows how many personal-data
+  items were masked.
+- **Ask** questions and get answers with clickable `[S1]` citations that open the source
+  excerpt, a "check this answer" banner with plain-language reasons, a confidence-based
+  status, the AI disclosure and the not-advice notice on every answer.
+- **Manage** documents (list, delete with confirmation), and for DPO/admin roles run
+  export, erasure, retention purge, audit-log verification and view the record of
+  processing.
+- **Role-aware**: viewers see only Ask and About; analysts add Documents; DPOs add
+  Privacy. The server enforces permissions regardless of what the UI shows.
+- **Accessible and responsive**: keyboard operable, screen-reader labels, WCAG AA
+  contrast in light and dark themes, reduced-motion support, sidebar on desktop and bottom
+  navigation on phones.
+- **Safe by construction**: no inline scripts or styles, no third-party hosts, a strict
+  Content-Security-Policy, and model output is rendered as text only (never as HTML).
+
+**Answers are written by Claude only if you enable it.** By default the app runs offline
+and answers quote the most relevant lines from your documents. For written answers:
+
+```bash
+FINRAG_LLM_PROVIDER=anthropic ANTHROPIC_API_KEY=... python scripts/demo.py
+```
+
+The header badge shows the current mode. A public, per-visitor demo can be deployed on Vercel: see
+[docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md). The demo launcher is for local use only; for
+production see [SECURITY.md](SECURITY.md) and set `FINRAG_WEB_UI=false` if you want an
+API-only deployment.
+
+---
+
 ## Architecture at a glance
 
 ```mermaid
@@ -105,7 +159,7 @@ flowchart LR
 ```
 
 The full design (component, sequence and key-management diagrams, trust boundaries) is in
-**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**. For step-by-step UML and user-flow diagrams naming every function, see **[docs/RAG_FLOW.md](docs/RAG_FLOW.md)**.
 
 ---
 
@@ -267,6 +321,10 @@ Controls are tagged in comments, for example:
 
 | Document | What it gives you |
 |---|---|
+| [docs/project/](docs/project/) | Project documents: [PRD](docs/project/PRD.md), [Design System](docs/project/Design_System.md), [Architecture](docs/project/Architecture.md), [Security](docs/project/Security.md), [Code Style](docs/project/CODE_STYLE.md), [Testing](docs/project/Testing.md), [Agents](docs/project/Agents.md) |
+| [docs/project/Design_System.md](docs/project/Design_System.md) | Design principles, tokens and component rules behind the web UI |
+| [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md) | Deploying the public demo on Vercel: files, environment variables, limits |
+| [docs/RAG_FLOW.md](docs/RAG_FLOW.md) | UML class, activity and sequence diagrams plus a user flow, mapping every RAG step (chunking, vectorising, matching, LLM call) to its function and file |
 | [docs/COMPLIANCE.md](docs/COMPLIANCE.md) | Article-by-article explanation for GDPR, EU AI Act, PII standard, OWASP LLM Top 10, AppSec, plus the organisational measures you still need |
 | [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) | Generated table: every rule → every `file:line` that implements it |
 | [finrag/compliance/rules.py](finrag/compliance/rules.py) | Registry of rule IDs and their meanings |
@@ -295,6 +353,8 @@ finrag/
 ├── pipeline.py             orchestrator: ingest / ask / erase / export / purge
 ├── api.py                  FastAPI server
 ├── cli.py                  command-line interface
+├── demo.py                 public demo mode: per-visitor workspaces and sample data
+├── web/                    browser UI: index.html, styles.css, js/ (no build step)
 ├── compliance/rules.py     rule registry (GDPR, EU AI Act, OWASP, SEC, PII, FIN)
 ├── security/
 │   ├── crypto.py           HKDF key ring, Fernet encryption, atomic writes
@@ -314,10 +374,11 @@ finrag/
 └── governance/
     ├── gdpr.py             lawful basis, purposes, Art. 9, RoPA, exports
     └── transparency.py     AI disclosure, model card, output label
-docs/                       ARCHITECTURE, COMPLIANCE, COMPLIANCE_MATRIX
+docs/                       ARCHITECTURE, RAG_FLOW, COMPLIANCE, COMPLIANCE_MATRIX
 samples/                    synthetic financial data for demos
 scripts/compliance_report.py
-tests/                      pytest suite (71 tests)
+scripts/demo.py             local launcher with demo users for the web UI
+tests/                      pytest suite (106 tests)
 ```
 
 ---
@@ -325,11 +386,13 @@ tests/                      pytest suite (71 tests)
 ## Testing
 
 ```bash
-pytest -q          # 71 tests, no network needed (Claude is mocked)
+pytest -q          # 106 tests, no network needed (Claude is mocked)
 ruff check finrag tests scripts
 ```
 
-The tests cover PII detection and its false positives on financial figures, vault
+The 3 browser tests in `tests/test_ui_e2e.py` run only if Playwright and a Chromium binary
+are available (`pip install playwright`, then `PLAYWRIGHT_CHROMIUM=/path/to/chrome pytest`);
+otherwise they skip. The tests cover PII detection and its false positives on financial figures, vault
 encryption, injection and prohibited-use blocking, malicious files (zip bomb, macros, fake
 PDFs, path traversal), tenant isolation, quarantine of poisoned documents, erasure, export,
 retention purge, audit-chain tamper detection, tampered-store detection, RBAC, the human

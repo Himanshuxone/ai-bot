@@ -63,9 +63,10 @@ class KeyRing:
     vault_key: bytes  # encrypts the pseudonym -> original-value vault
     pseudonym_key: bytes  # HMAC key for deterministic PII tokens
     audit_key: bytes  # HMAC key for the tamper-evident audit chain
+    demo_key: bytes  # HMAC key that signs stateless demo session tokens
 
     @classmethod
-    def from_settings(cls, settings: Settings) -> "KeyRing":
+    def from_settings(cls, settings: Settings) -> KeyRing:
         """Build the key ring, failing closed in production if no key is set."""
         secret = settings.master_key.get_secret_value() if settings.master_key else None
         if not secret:
@@ -91,6 +92,7 @@ class KeyRing:
             vault_key=_derive(master, "vault"),
             pseudonym_key=_derive(master, "pseudonym"),
             audit_key=_derive(master, "audit"),
+            demo_key=_derive(master, "demo"),
         )
 
 
@@ -115,7 +117,7 @@ class Encryptor:
             raise DecryptionError("ciphertext failed authentication") from exc
 
 
-def atomic_write(path: "os.PathLike[str] | str", data: bytes) -> None:
+def atomic_write(path: os.PathLike[str] | str, data: bytes) -> None:
     """Write ``data`` atomically with owner-only permissions (0600)."""
     # [RULE: GDPR-ART5-1F] Atomic replace avoids half-written (corrupted) files;
     # 0600 restricts read access to the service account (least privilege).

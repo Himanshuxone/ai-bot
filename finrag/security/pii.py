@@ -1,4 +1,4 @@
-"""
+r"""
 PII detection, redaction and keyed pseudonymisation.
 
 Pipeline position

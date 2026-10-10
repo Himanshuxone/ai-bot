@@ -20,18 +20,27 @@ plain HTTP to the internet.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from finrag import demo
 from finrag.config import get_settings
 from finrag.generation.llm import LLMUnavailableError
 from finrag.governance import gdpr, transparency
 from finrag.ingestion.loaders import UnsupportedDocumentError
 from finrag.pipeline import FinRAGPipeline, RateLimitExceeded
-from finrag.security.access import AccessDenied, APIKeyAuthenticator, Permission, Principal
+from finrag.security.access import (
+    AccessDenied,
+    APIKeyAuthenticator,
+    Permission,
+    Principal,
+    RateLimiter,
+)
 
 logger = logging.getLogger("finrag.api")
 settings = get_settings()
@@ -50,12 +59,19 @@ pipeline = FinRAGPipeline(settings)
 
 if settings.api_keys_file:
     authenticator = APIKeyAuthenticator.from_file(settings.api_keys_file)
-elif settings.is_production:
+elif settings.is_production and not settings.demo_mode:
     # [RULE: SEC-AUTHN] Fail closed: production without credentials config.
     raise RuntimeError("FINRAG_API_KEYS_FILE must be configured in production")
 else:
     authenticator = APIKeyAuthenticator([])  # dev: every request is rejected
     logger.warning("No API keys configured; all authenticated endpoints will return 401.")
+
+# Public demo mode: per-visitor temporary workspaces (see finrag/demo.py).
+demo_auth = (demo.DemoAuthenticator(pipeline.keys.demo_key, settings.demo_session_minutes)
+             if settings.demo_mode else None)
+# [RULE: OWASP-LLM10] Limit how fast new demo workspaces can be created.
+_demo_session_limiter = RateLimiter(20)
+_seeded_workspaces: set[str] = set()  # workspaces already seeded by this instance
 
 
 # ----------------------------------------------------------------- middleware
@@ -74,7 +90,16 @@ async def security_middleware(request: Request, call_next):  # type: ignore[no-u
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
-    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    # The JSON API gets the strictest policy. The browser UI (static files under
+    # /ui) may load only same-origin scripts, styles and images: no inline code,
+    # no third-party hosts, no framing (also limits XSS impact on the API key).
+    if request.url.path.startswith("/ui"):
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+            "connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'none'; "
+            "form-action 'none'; frame-ancestors 'none'")
+    else:
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
     # [RULE: EUAIA-ART50] Machine-readable disclosure that responses are AI-assisted.
     response.headers["X-AI-Generated"] = "true"
     return response
@@ -119,6 +144,14 @@ async def _unhandled(_: Request, exc: Exception) -> JSONResponse:
 def get_principal(x_api_key: Annotated[str | None, Header()] = None) -> Principal:
     """Authenticate the caller from the ``X-API-Key`` header."""
     principal = authenticator.authenticate(x_api_key)
+    if principal is None and demo_auth is not None:
+        principal = demo_auth.authenticate(x_api_key)
+        if principal is not None and principal.tenant not in _seeded_workspaces:
+            # Serverless instances come and go: restore the samples if this instance has
+            # never seen the workspace (or its temporary disk was recycled).
+            if not pipeline._ctx(principal.tenant).store.documents:
+                demo.seed_samples(pipeline, principal)
+            _seeded_workspaces.add(principal.tenant)
     if principal is None:
         raise HTTPException(status_code=401, detail="unauthorised")
     return principal
@@ -148,6 +181,61 @@ class SubjectRequest(BaseModel):
 def healthz() -> dict[str, str]:
     """Liveness probe (no auth, no data)."""
     return {"status": "ok"}
+
+
+@app.get("/v1/me")
+def me(principal: PrincipalDep) -> dict[str, object]:
+    """Who am I and what may I do? Used by the web UI to show only allowed actions.
+
+    [RULE: SEC-AUTHN] Doubles as the API-key check at sign-in.
+    [RULE: SEC-AUTHZ] The UI hides actions the role lacks; the server still enforces
+                      every permission, so hiding is convenience, not security.
+    """
+    return {
+        "principal": principal.principal_id,
+        "tenant": principal.tenant,
+        "roles": sorted(principal.roles),
+        "permissions": sorted(p.value for p in principal.permissions),
+        "provider": settings.llm_provider.value,
+        "model": pipeline.generator.model_name,
+        "demo": demo_auth is not None and principal.tenant.startswith("demo-"),
+        "options": {
+            "lawful_bases": [b.value for b in gdpr.LawfulBasis],
+            "purposes": [p.value for p in gdpr.Purpose],
+            "art9_conditions": [c.value for c in gdpr.Art9Condition],
+            "extensions": [".pdf", ".xlsx", ".csv", ".txt", ".md"],
+            "max_upload_bytes": settings.max_upload_bytes,
+            "max_query_chars": settings.max_query_chars,
+            "default_retention_days": settings.default_retention_days,
+        },
+    }
+
+
+@app.get("/v1/demo")
+def demo_info() -> dict[str, object]:
+    """Tell the web UI whether the public demo is available. Public by design."""
+    return {"enabled": demo_auth is not None,
+            "session_minutes": settings.demo_session_minutes}
+
+
+@app.post("/v1/demo/session")
+def demo_session() -> dict[str, object]:
+    """Start a private demo workspace with sample documents and return its session key.
+
+    [RULE: OWASP-LLM08] Each call creates a new isolated workspace.
+    [RULE: OWASP-LLM10] Rate limited; old workspaces are pruned.
+    """
+    if demo_auth is None:
+        raise HTTPException(status_code=404, detail="not found")
+    if not _demo_session_limiter.allow("sessions"):
+        raise RateLimitExceeded("too many demo sessions")
+    token = demo_auth.issue()
+    principal = demo_auth.authenticate(token)
+    assert principal is not None
+    demo.prune_workspaces(pipeline, settings.demo_max_workspaces)
+    demo.seed_samples(pipeline, principal)
+    _seeded_workspaces.add(principal.tenant)
+    return {"api_key": token, "expires_in": demo_auth.ttl_seconds}
 
 
 @app.get("/v1/transparency")
@@ -239,3 +327,16 @@ def ropa(principal: PrincipalDep) -> dict[str, object]:
     """Record of processing activities (Art. 30)."""
     principal.require(Permission.VIEW_AUDIT)
     return gdpr.records_of_processing(settings)
+
+
+# ------------------------------------------------------------------- web UI
+WEB_DIR = Path(__file__).parent / "web"
+
+if settings.web_ui and WEB_DIR.is_dir():
+    # [RULE: SEC-HEADERS] Served with the UI-specific CSP set in the middleware.
+    app.mount("/ui", StaticFiles(directory=WEB_DIR, html=True), name="ui")
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        """Send browsers to the web app."""
+        return RedirectResponse("/ui/")

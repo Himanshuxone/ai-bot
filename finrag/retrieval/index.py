@@ -27,11 +27,11 @@ import math
 import re
 from collections import Counter
 from dataclasses import dataclass
+from itertools import pairwise
 
 _TOKEN_RE = re.compile(r"[a-z]+[0-9]*|[0-9]+(?:[.,][0-9]+)*")
 _STOPWORDS = frozenset(
-    "a an and are as at be by for from has have in is it its of on or that the this to was "
-    "were what which who will with how much many did does do our their there".split()
+    ["a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has", "have", "in", "is", "it", "its", "of", "on", "or", "that", "the", "this", "to", "was", "were", "what", "which", "who", "will", "with", "how", "much", "many", "did", "does", "do", "our", "their", "there"]
 )
 
 # Lightweight finance synonym map used for query expansion.
@@ -69,7 +69,7 @@ def tokenize(text: str) -> list[str]:
 
 def _features(tokens: list[str]) -> Counter[int]:
     """Hash unigrams and bigrams into a sparse feature vector."""
-    grams = tokens + [f"{a}_{b}" for a, b in zip(tokens, tokens[1:])]
+    grams = tokens + [f"{a}_{b}" for a, b in pairwise(tokens)]
     return Counter(int(hashlib.blake2b(g.encode(), digest_size=8).hexdigest(), 16) % _HASH_DIM
                    for g in grams)
 

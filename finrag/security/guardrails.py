@@ -33,12 +33,12 @@ from finrag.security.pii import TOKEN_RE, PIIDetector
 # --------------------------------------------------------------------------
 # [RULE: OWASP-LLM01] Common jailbreak / injection phrasings.
 _INJECTION_PATTERNS = [
-    r"ignore\s+(?:all\s+|any\s+)?(?:the\s+)?(?:previous|prior|above|earlier)\s+"
-    r"(?:instructions?|prompts?|rules?|context)",
+    (r"ignore\s+(?:all\s+|any\s+)?(?:the\s+)?(?:previous|prior|above|earlier)\s+"
+     r"(?:instructions?|prompts?|rules?|context)"),
     r"disregard\s+(?:all\s+|the\s+)?(?:previous|prior|above|system)\s+\w+",
     r"forget\s+(?:everything|all|your)\s+(?:instructions?|rules?|above)?",
-    r"(?:reveal|show|print|repeat|output|leak)\s+(?:me\s+)?(?:your|the)\s+"
-    r"(?:system\s+prompt|instructions|hidden\s+prompt|initial\s+prompt)",
+    (r"(?:reveal|show|print|repeat|output|leak)\s+(?:me\s+)?(?:your|the)\s+"
+     r"(?:system\s+prompt|instructions|hidden\s+prompt|initial\s+prompt)"),
     r"you\s+are\s+now\s+(?:a|an|in)\b",
     r"\b(?:developer|god|dan|jailbreak)\s+mode\b",
     r"act\s+as\s+(?:if\s+you\s+(?:are|were)\s+)?(?:an?\s+)?(?:unrestricted|unfiltered)",
@@ -46,8 +46,8 @@ _INJECTION_PATTERNS = [
     r"</?\s*(?:system|assistant|instructions?)\s*>",
     r"\bnew\s+instructions?\s*:",
     r"override\s+(?:your|the)\s+(?:safety|guardrails?|rules|policy)",
-    r"(?:print|list|dump|reveal)\s+(?:all\s+)?(?:the\s+)?(?:api\s+keys?|secrets?|passwords?|"
-    r"credentials|environment\s+variables)",
+    (r"(?:print|list|dump|reveal)\s+(?:all\s+)?(?:the\s+)?(?:api\s+keys?|secrets?|passwords?|"
+     r"credentials|environment\s+variables)"),
 ]
 _INJECTION_RE = re.compile("|".join(f"(?:{p})" for p in _INJECTION_PATTERNS), re.IGNORECASE)
 
@@ -80,7 +80,7 @@ _ADVICE_RE = re.compile(
 )
 
 # Zero-width and bidi control characters used to smuggle hidden instructions.
-_INVISIBLE_RE = re.compile("[​-‏‪-‮⁠-⁤﻿]")
+_INVISIBLE_RE = re.compile("[\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
 
 # Long base64-looking blobs can carry encoded instructions.
 _BASE64_BLOB_RE = re.compile(r"[A-Za-z0-9+/]{120,}={0,2}")
@@ -255,6 +255,6 @@ def check_answer(
 
     # [RULE: OWASP-LLM05] Output is treated as plain text: strip anything that
     # looks like markup/script so downstream UIs cannot be attacked via HTML.
-    text = re.sub(r"<\s*/?\s*(script|iframe|object|embed|style)[^>]*>", "", text, flags=re.I)
+    text = re.sub(r"<\s*/?\s*(script|iframe|object|embed|style)[^>]*>", "", text, flags=re.IGNORECASE)
 
     return GuardrailResult(not reasons, reasons, text, flags)
