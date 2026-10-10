@@ -46,6 +46,43 @@ external provider.
 Vercel's *Deployment Protection* is on by default; turn it off for this project if the
 link should be public.
 
+## Windows (PowerShell) quick path
+
+```powershell
+git clone https://github.com/Himanshuxone/ai-bot.git; cd ai-bot
+npx vercel login
+npx vercel link
+npx vercel env add FINRAG_ENVIRONMENT production            # type: production
+npx vercel env add FINRAG_DEMO_MODE production              # type: true
+npx vercel env add FINRAG_DATA_DIR production               # type: /tmp/finrag
+npx vercel env add FINRAG_DEFAULT_RETENTION_DAYS production # type: 1
+npx vercel env add FINRAG_MAX_UPLOAD_BYTES production       # type: 2097152
+npx vercel env add FINRAG_MASTER_KEY production --sensitive # paste your key
+npx vercel env ls                                           # all six must be listed
+npx vercel deploy --prod
+```
+
+Generate the key in PowerShell with:
+
+```powershell
+$b = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+[Convert]::ToBase64String($b).Replace('+','-').Replace('/','_')
+```
+
+If `npx` is blocked by PowerShell's script policy, use Command Prompt or `npx.cmd`.
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| Vercel page "A function needed by this page temporarily failed" (older builds of this repo) | The app crashed while starting, usually because `FINRAG_MASTER_KEY` or another variable was missing for the **Production** environment. Run `npx vercel env ls`, add what is missing, then redeploy |
+| JSON `{"detail": "FinRAG failed to start", "reason": ...}` with HTTP 503 | The same problem, now explained. The `reason` names the missing or invalid setting. Fix it and redeploy (variables only apply to **new** deployments) |
+| Page asks you to log in to Vercel | Deployment Protection is on. Turn off Vercel Authentication for the project |
+| "Try the demo" button missing | `FINRAG_DEMO_MODE` is not `true` in Production |
+| Sample documents vanish or uploads disappear | Expected on serverless: storage is temporary per instance; the samples reload automatically |
+| Need the real error | `npx vercel logs <your-production-url>` or the project's **Logs** tab; the full traceback is printed there |
+
 ## Limits of this deployment
 
 - **Storage is temporary.** Functions use a per-instance `/tmp`. A visitor routed to a
