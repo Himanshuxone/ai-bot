@@ -4,7 +4,9 @@ Vercel entry point.
 Vercel's Python runtime looks for a top-level ``app = FastAPI(...)`` in this file (it
 checks the source statically, so the assignment must be visible at module level). That
 ``app`` is a thin wrapper: the real application from ``finrag.api`` is mounted inside it.
-All requests are routed here by ``vercel.json``, including the web UI under ``/ui/``.
+``vercel.json`` sets ``"framework": "fastapi"``, so Vercel sends every request here and keeps
+the original path. Do not add a ``rewrites`` entry: a rewrite to ``/api/index`` replaces the
+path, and every route then answers 404.
 
 Configure the deployment with environment variables (see docs/DEPLOY_VERCEL.md):
 ``FINRAG_DEMO_MODE=true`` gives every visitor a private temporary workspace with sample

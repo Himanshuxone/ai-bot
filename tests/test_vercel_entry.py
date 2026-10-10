@@ -132,3 +132,12 @@ def test_path_guard_strips_function_prefix_and_reports_path(monkeypatch, tmp_pat
     response = client.get("/api/index/healthz")
     assert response.status_code == 200
     assert "used='/healthz'" in response.headers["x-finrag-path"]
+
+
+def test_vercel_json_uses_framework_routing_not_a_rewrite():
+    # A rewrite to /api/index makes the function see "/api/index" for every request.
+    import json
+
+    config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+    assert config.get("framework") == "fastapi"
+    assert "rewrites" not in config and "routes" not in config
