@@ -99,3 +99,19 @@ def test_vercel_defaults_data_dir_to_tmp():
     status, _ = _run({"VERCEL": "1", "FINRAG_ENVIRONMENT": "production",
                       "FINRAG_DEMO_MODE": "true", "FINRAG_MASTER_KEY": GOOD_KEY})
     assert status == 200
+
+
+def test_function_address_redirects_to_ui(monkeypatch, tmp_path):
+    # Opening the function's own URL (/api/index) must not be a bare 404.
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("FINRAG_DATA_DIR", str(tmp_path))
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "entry_alias_probe", Path(__file__).resolve().parents[1] / "api" / "index.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    response = TestClient(module.app).get("/api/index", follow_redirects=False)
+    assert response.status_code == 307 and response.headers["location"] == "/ui/"

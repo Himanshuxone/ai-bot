@@ -28,7 +28,7 @@ import traceback
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 # Make the repository root importable (this file lives in api/).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -38,6 +38,14 @@ if os.environ.get("VERCEL"):
 
 # Top-level FastAPI instance: required by Vercel's static entrypoint detection.
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+
+@app.get("/api/index", include_in_schema=False)
+@app.get("/api", include_in_schema=False)
+async def entry_alias() -> RedirectResponse:
+    """The function's own address: send people who open it to the web app."""
+    return RedirectResponse("/ui/")
+
 
 def _describe(exc: Exception) -> str:
     """Short, safe description of a startup failure: names variables, never values."""
