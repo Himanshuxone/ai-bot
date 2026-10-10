@@ -14,5 +14,7 @@ jobs:
       - run: ruff check finrag tests scripts
       - run: pytest -q
       - run: python scripts/compliance_report.py --check
+      # Embedded UI/sample copy used by serverless hosts must match the real files
+      - run: python scripts/build_assets.py --check
       # Dependency vulnerability scan  [RULE: EUAIA-ART15] cybersecurity
       - run: pip-audit -r requirements.txt

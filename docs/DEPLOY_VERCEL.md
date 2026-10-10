@@ -22,6 +22,7 @@ documents. It is not a production setup for real financial or personal data.
 | `requirements.txt`, `.python-version` | Dependencies and Python 3.12 |
 | `.vercelignore` | Keeps tests, docs and local data out of the upload |
 | `finrag/demo.py`, `finrag/demo_data/` | Demo sessions, workspace pruning, bundled samples |
+| `finrag/_assets.py` | Generated embedded copy of the UI and samples, for hosts that package only Python (`python scripts/build_assets.py`) |
 
 ## Environment variables
 
@@ -79,6 +80,7 @@ If `npx` is blocked by PowerShell's script policy, use Command Prompt or `npx.cm
 | Vercel page "A function needed by this page temporarily failed" (older builds of this repo) | The app crashed while starting, usually because `FINRAG_MASTER_KEY` or another variable was missing for the **Production** environment. Run `npx vercel env ls`, add what is missing, then redeploy |
 | JSON `{"detail": "FinRAG failed to start", "reason": ...}` with HTTP 503 | The same problem, now explained. The `reason` names the missing or invalid setting. Fix it and redeploy (variables only apply to **new** deployments) |
 | Build error: `Found api/index.py but it does not define a top-level "app" FastAPI instance` | Fixed in this repo: `api/index.py` now defines `app = FastAPI(...)` at module level and mounts the real app inside it. Pull the latest code. Do **not** add a `[tool.vercel] entrypoint` setting, which would bypass the startup-error safeguard |
+| Plain `{"detail":"Not Found"}` at `/` | The UI files were not packaged with the function. Fixed in this repo: the UI and sample documents are embedded in `finrag/_assets.py`, so any host that ships the Python modules works. Pull the latest code and redeploy |
 | `reason` says `Invalid settings: FINRAG_...: ...` | One variable has an unacceptable value. The message names the variable (never its value). Typical causes: a typo, `FINRAG_MAX_UPLOAD_BYTES` not a whole number, or `FINRAG_DEMO_MODE` not `true`/`false`. Stray quotes, spaces, line endings and capital letters are tolerated. Fix it and redeploy |
 | Page asks you to log in to Vercel | Deployment Protection is on. Turn off Vercel Authentication for the project |
 | "Try the demo" button missing | `FINRAG_DEMO_MODE` is not `true` in Production |

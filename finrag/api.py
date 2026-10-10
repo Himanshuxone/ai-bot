@@ -20,15 +20,14 @@ plain HTTP to the internet.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from finrag import demo
+from finrag import assets, demo
 from finrag.config import get_settings
 from finrag.generation.llm import LLMUnavailableError
 from finrag.governance import gdpr, transparency
@@ -330,12 +329,27 @@ def ropa(principal: PrincipalDep) -> dict[str, object]:
 
 
 # ------------------------------------------------------------------- web UI
-WEB_DIR = Path(__file__).parent / "web"
-
-if settings.web_ui and WEB_DIR.is_dir():
+if settings.web_ui and assets.web_dir() is not None:
     # [RULE: SEC-HEADERS] Served with the UI-specific CSP set in the middleware.
-    app.mount("/ui", StaticFiles(directory=WEB_DIR, html=True), name="ui")
+    app.mount("/ui", StaticFiles(directory=assets.web_dir(), html=True), name="ui")
+elif settings.web_ui and assets.embedded_web_available():
+    # The UI files are not on disk (some serverless hosts package only Python modules):
+    # serve the copy embedded in finrag/_assets.py instead.
+    @app.get("/ui", include_in_schema=False)
+    def ui_redirect() -> RedirectResponse:
+        """Add the trailing slash so relative links resolve."""
+        return RedirectResponse("/ui/")
 
+    @app.get("/ui/{path:path}", include_in_schema=False)
+    def ui_embedded(path: str) -> Response:
+        """Serve an embedded UI file. [RULE: SEC-FILE-UPLOAD] Exact-key lookup only."""
+        rel = path or "index.html"
+        data = assets.embedded_web_file(rel)
+        if data is None:
+            raise HTTPException(status_code=404, detail="not found")
+        return Response(data, media_type=assets.media_type(rel))
+
+if settings.web_ui and (assets.web_dir() is not None or assets.embedded_web_available()):
     @app.get("/", include_in_schema=False)
     def root() -> RedirectResponse:
         """Send browsers to the web app."""

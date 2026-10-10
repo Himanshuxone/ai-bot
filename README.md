@@ -354,6 +354,7 @@ finrag/
 ├── api.py                  FastAPI server
 ├── cli.py                  command-line interface
 ├── demo.py                 public demo mode: per-visitor workspaces and sample data
+├── assets.py, _assets.py   find the UI/samples on disk, or use the embedded copy (generated)
 ├── web/                    browser UI: index.html, styles.css, js/ (no build step)
 ├── compliance/rules.py     rule registry (GDPR, EU AI Act, OWASP, SEC, PII, FIN)
 ├── security/
@@ -378,7 +379,8 @@ docs/                       ARCHITECTURE, RAG_FLOW, COMPLIANCE, COMPLIANCE_MATRI
 samples/                    synthetic financial data for demos
 scripts/compliance_report.py
 scripts/demo.py             local launcher with demo users for the web UI
-tests/                      pytest suite (118 tests)
+scripts/build_assets.py     regenerate finrag/_assets.py after editing the UI or demo files
+tests/                      pytest suite (120 tests)
 ```
 
 ---
@@ -386,7 +388,7 @@ tests/                      pytest suite (118 tests)
 ## Testing
 
 ```bash
-pytest -q          # 118 tests, no network needed (Claude is mocked)
+pytest -q          # 120 tests, no network needed (Claude is mocked)
 ruff check finrag tests scripts
 ```
 

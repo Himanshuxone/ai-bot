@@ -39,14 +39,13 @@ import logging
 import re
 import secrets
 import time
-from pathlib import Path
 
+from finrag import assets
 from finrag.pipeline import FinRAGPipeline
 from finrag.security.access import Principal
 
 logger = logging.getLogger(__name__)
 
-DEMO_DATA = Path(__file__).parent / "demo_data"
 SAMPLE_FILES = ("sample_financials.csv", "board_notes.md", "quarterly_budget.xlsx")
 _TENANT_RE = re.compile(r"^demo-[0-9a-f]{12}$")
 _PREFIX = "fd1"
@@ -97,7 +96,7 @@ def seed_samples(pipeline: FinRAGPipeline, principal: Principal) -> int:
     loaded = 0
     for name in SAMPLE_FILES:
         try:
-            pipeline.ingest(principal, name, (DEMO_DATA / name).read_bytes(),
+            pipeline.ingest(principal, name, assets.demo_sample(name),
                             lawful_basis="legitimate_interests", purpose="financial_analysis",
                             retention_days=1)
             loaded += 1

@@ -1,7 +1,7 @@
 # Testing: FinRAG
 
 Strategy, current coverage, how to run the tests, and the gaps. Numbers below were
-checked against the repository when this document was written: **118 tests, all passing** (3 of them are browser tests that skip themselves when Playwright or Chromium is unavailable).
+checked against the repository when this document was written: **120 tests, all passing** (3 of them are browser tests that skip themselves when Playwright or Chromium is unavailable).
 
 Related: [PRD](PRD.md) · [Security](Security.md) · [Code Style](CODE_STYLE.md) · [Agents](Agents.md)
 
@@ -48,9 +48,10 @@ Typical run time is a few seconds.
 | `tests/test_web.py` | 23 | UI files served and `/` redirect; strict UI CSP while the API keeps `default-src 'none'`; `/v1/me` requires a key and reflects role permissions; UI can be disabled; static scan of every JS file for forbidden patterns (`innerHTML`, `eval`, inline styles, sensitive data in `localStorage`); `index.html` has no inline code or third-party hosts and zoom is not disabled; JS syntax valid |
 | `tests/test_ui_e2e.py` | 3 | Real browser (Playwright, Chromium): wrong key rejected inline; analyst signs in, GDPR fields validated, uploads a CSV, asks, opens a citation, injection attempt is blocked, no console errors; viewer sees only Ask and About |
 | `tests/test_demo.py` | 9 | Demo tokens (round trip, tampering, expiry, wrong key, junk); demo mode refuses an external AI provider; a session gives a private workspace with the three samples and masked personal data; visitors cannot see each other's uploads; samples restored after an instance recycle; old workspaces pruned; endpoints inert when disabled; works in production mode without a keys file |
+| `tests/test_assets.py` | 2 | The embedded UI/sample bundle matches the files on disk; a copy of the project containing **only Python files** (as a serverless host may package it) still serves the UI with correct content types, blocks path traversal, sets the CSP and loads the three demo samples |
 | `tests/test_vercel_entry.py` | 7 | `api/index.py` exposes a top-level `app = FastAPI(...)` (Vercel checks this statically); the UI, redirect, CSP and demo session work through the wrapper; it starts with demo settings; a missing master key yields a clear HTTP 503 explaining the problem without leaking values; on Vercel the data folder defaults to `/tmp` (each scenario runs in a fresh subprocess) |
 | `tests/test_compliance_tags.py` | 3 | Every `[RULE: …]` tag is registered, every registered rule has an implementation tag, `docs/COMPLIANCE_MATRIX.md` is current |
-| **Total** | **118** | |
+| **Total** | **120** | |
 
 Shared fixtures are in `tests/conftest.py`: `settings` (temp data dir, fresh master key,
 high rate limit), `pipeline` (offline generator), the principals `analyst`, `dpo`,

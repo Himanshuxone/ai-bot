@@ -157,6 +157,19 @@ stop and ask.
    Chromium is available also run `tests/test_ui_e2e.py`.
 6. Update [Design System](Design_System.md) if you change a token, pattern or component.
 
+### After editing the UI or the demo sample files
+
+`finrag/_assets.py` is a generated, compressed copy of `finrag/web/**` and
+`finrag/demo_data/*` that serverless hosts fall back to when they package only Python
+modules. After changing any of those files run:
+
+```bash
+python scripts/build_assets.py          # regenerate; commit finrag/_assets.py
+```
+
+CI (`build_assets.py --check`) and `tests/test_assets.py` fail if it is stale. Never edit
+`_assets.py` by hand.
+
 ### Swap the retrieval backend
 
 Keep the `TenantStore.search(query, top_k)` contract. Embed only pseudonymised text, keep
