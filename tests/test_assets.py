@@ -32,7 +32,8 @@ assert c.get("/ui/styles.css").headers["content-type"].startswith("text/css")
 assert c.get("/ui/js/views/ask.js").status_code == 200
 assert c.get("/ui/missing.js").status_code == 404
 assert c.get("/ui/../finrag/config.py").status_code == 404
-assert c.get("/ui", follow_redirects=False).status_code in (302, 307)
+bare = c.get("/ui", follow_redirects=False)  # no redirect: hosts that drop the slash would loop
+assert bare.status_code == 200 and "FinRAG" in bare.text, bare.status_code
 csp = page.headers["content-security-policy"]
 assert "script-src 'self'" in csp and "unsafe-inline" not in csp
 token = c.post("/v1/demo/session").json()["api_key"]

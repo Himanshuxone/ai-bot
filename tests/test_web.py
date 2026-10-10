@@ -56,6 +56,8 @@ def test_root_redirects_to_ui_and_files_are_served(client):
     assert response.status_code in (302, 307) and response.headers["location"] == "/ui/"
     page = client.get("/ui/")
     assert page.status_code == 200 and "text/html" in page.headers["content-type"]
+    bare = client.get("/ui", follow_redirects=False)  # must not redirect (host slash loops)
+    assert bare.status_code == 200 and "<base href=\"/ui/\">" in bare.text
     assert client.get("/ui/js/main.js").status_code == 200
     assert client.get("/ui/styles.css").status_code == 200
 
