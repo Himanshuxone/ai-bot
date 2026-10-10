@@ -26,6 +26,15 @@ This is informational analysis of the supplied documents, not investment, tax ..
 *(Illustrative output with the Claude provider. The default offline provider returns the most
 relevant source lines instead of a written answer.)*
 
+**Try it:** the web app runs as a public demo on Vercel. Click **Try the demo with sample
+documents** to get a private, temporary workspace with three synthetic files, then ask
+"What was net income in FY2024?". Deploy your own in minutes with
+[docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md). Never upload real data to a public demo.
+
+**Selling it:** positioning, target customers, pricing hypotheses, sales process and a
+marketing plan are in [docs/project/GoToMarket.md](docs/project/GoToMarket.md); the product
+requirements are in [docs/project/PRD.md](docs/project/PRD.md).
+
 ---
 
 ## Contents
@@ -321,9 +330,10 @@ Controls are tagged in comments, for example:
 
 | Document | What it gives you |
 |---|---|
-| [docs/project/](docs/project/) | Project documents: [PRD](docs/project/PRD.md), [Design System](docs/project/Design_System.md), [Architecture](docs/project/Architecture.md), [Security](docs/project/Security.md), [Code Style](docs/project/CODE_STYLE.md), [Testing](docs/project/Testing.md), [Agents](docs/project/Agents.md) |
+| [docs/project/](docs/project/) | Project documents: [PRD](docs/project/PRD.md), [Design System](docs/project/Design_System.md), [Architecture](docs/project/Architecture.md), [Security](docs/project/Security.md), [Code Style](docs/project/CODE_STYLE.md), [Testing](docs/project/Testing.md), [Agents](docs/project/Agents.md), [Go-to-Market](docs/project/GoToMarket.md) |
 | [docs/project/Design_System.md](docs/project/Design_System.md) | Design principles, tokens and component rules behind the web UI |
-| [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md) | Deploying the public demo on Vercel: files, environment variables, limits |
+| [docs/project/GoToMarket.md](docs/project/GoToMarket.md) | How to sell it: customers, positioning, packaging and pricing hypotheses, sales process, marketing plan, objection handling |
+| [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md) | Deploying the public demo on Vercel: files, environment variables, verification, troubleshooting, limits |
 | [docs/RAG_FLOW.md](docs/RAG_FLOW.md) | UML class, activity and sequence diagrams plus a user flow, mapping every RAG step (chunking, vectorising, matching, LLM call) to its function and file |
 | [docs/COMPLIANCE.md](docs/COMPLIANCE.md) | Article-by-article explanation for GDPR, EU AI Act, PII standard, OWASP LLM Top 10, AppSec, plus the organisational measures you still need |
 | [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) | Generated table: every rule → every `file:line` that implements it |
@@ -380,7 +390,7 @@ samples/                    synthetic financial data for demos
 scripts/compliance_report.py
 scripts/demo.py             local launcher with demo users for the web UI
 scripts/build_assets.py     regenerate finrag/_assets.py after editing the UI or demo files
-tests/                      pytest suite (120 tests)
+tests/                      pytest suite (123 tests)
 ```
 
 ---
@@ -388,7 +398,7 @@ tests/                      pytest suite (120 tests)
 ## Testing
 
 ```bash
-pytest -q          # 120 tests, no network needed (Claude is mocked)
+pytest -q          # 123 tests, no network needed (Claude is mocked)
 ruff check finrag tests scripts
 ```
 

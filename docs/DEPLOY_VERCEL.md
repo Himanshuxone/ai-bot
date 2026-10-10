@@ -6,7 +6,7 @@ documents. It is not a production setup for real financial or personal data.
 
 ## What you get
 
-- The web UI at `/` (redirects to `/ui/`) and the API under `/v1/*`.
+- The web UI at `/` (also `/ui` and `/ui/`; no redirects) and the API under `/v1/*`.
 - A **Try the demo with sample documents** button. Each click creates a new isolated
   workspace (`demo-<random>`) containing `sample_financials.csv`, `board_notes.md` and
   `quarterly_budget.xlsx`, signed for 2 hours.
@@ -18,7 +18,7 @@ documents. It is not a production setup for real financial or personal data.
 | File | Purpose |
 |---|---|
 | `api/index.py` | Entry point: exposes the ASGI `app` to the Vercel Python runtime |
-| `vercel.json` | Routes every path to the function and bundles `finrag/**` (UI and sample files) |
+| `vercel.json` | Sets `"framework": "fastapi"` (Vercel then sends every path to the function and keeps the original path) and bundles `finrag/**`. **Do not add `rewrites`**: a rewrite to `/api/index` replaces the path, so every route answers 404 |
 | `requirements.txt`, `.python-version` | Dependencies and Python 3.12 |
 | `.vercelignore` | Keeps tests, docs and local data out of the upload |
 | `finrag/demo.py`, `finrag/demo_data/` | Demo sessions, workspace pruning, bundled samples |
@@ -40,7 +40,7 @@ external provider.
 
 ## Deploy
 
-1. Import the repository in Vercel (Framework preset: Other), or run `vercel deploy`.
+1. Import the repository in Vercel (the preset is picked up from `vercel.json`), or run `npx vercel deploy --prod` from the `main` branch.
 2. Add the environment variables above for Production.
 3. Deploy. Open the URL and click **Try the demo**.
 
@@ -80,12 +80,26 @@ If `npx` is blocked by PowerShell's script policy, use Command Prompt or `npx.cm
 | Vercel page "A function needed by this page temporarily failed" (older builds of this repo) | The app crashed while starting, usually because `FINRAG_MASTER_KEY` or another variable was missing for the **Production** environment. Run `npx vercel env ls`, add what is missing, then redeploy |
 | JSON `{"detail": "FinRAG failed to start", "reason": ...}` with HTTP 503 | The same problem, now explained. The `reason` names the missing or invalid setting. Fix it and redeploy (variables only apply to **new** deployments) |
 | Build error: `Found api/index.py but it does not define a top-level "app" FastAPI instance` | Fixed in this repo: `api/index.py` now defines `app = FastAPI(...)` at module level and mounts the real app inside it. Pull the latest code. Do **not** add a `[tool.vercel] entrypoint` setting, which would bypass the startup-error safeguard |
-| Plain `{"detail":"Not Found"}` at `/` | The UI files were not packaged with the function. Fixed in this repo: the UI and sample documents are embedded in `finrag/_assets.py`, so any host that ships the Python modules works. Pull the latest code and redeploy |
+| Plain `{"detail":"Not Found"}` on **every** path, including `/healthz`, and `curl -I` shows `X-Finrag-Path: seen='/api/index'` | A `rewrites` entry in `vercel.json` replaced the request path. Fixed in this repo (framework routing, no rewrite). Pull `main` and redeploy. `X-Finrag-Path` on every response shows the path the app received |
+| Browser says "page is not redirecting" at `/ui/` (older builds) | The app redirected `/ui` to `/ui/` while Vercel strips the trailing slash. Fixed: `/`, `/ui` and `/ui/` all return the page directly |
+| Plain `{"detail":"Not Found"}` at `/` only | The UI files were not packaged with the function. Fixed in this repo: the UI and sample documents are embedded in `finrag/_assets.py`, so any host that ships the Python modules works. Pull the latest code and redeploy |
 | `reason` says `Invalid settings: FINRAG_...: ...` | One variable has an unacceptable value. The message names the variable (never its value). Typical causes: a typo, `FINRAG_MAX_UPLOAD_BYTES` not a whole number, or `FINRAG_DEMO_MODE` not `true`/`false`. Stray quotes, spaces, line endings and capital letters are tolerated. Fix it and redeploy |
 | Page asks you to log in to Vercel | Deployment Protection is on. Turn off Vercel Authentication for the project |
 | "Try the demo" button missing | `FINRAG_DEMO_MODE` is not `true` in Production |
 | Sample documents vanish or uploads disappear | Expected on serverless: storage is temporary per instance; the samples reload automatically |
 | Need the real error | `npx vercel logs <your-production-url>` or the project's **Logs** tab; the full traceback is printed there |
+
+## Verify a deployment
+
+```powershell
+curl.exe -sI https://<your-url>/healthz     # HTTP 200, X-Finrag-Path: seen='/healthz'
+curl.exe -s  https://<your-url>/v1/demo     # {"enabled":true,"session_minutes":120}
+```
+
+Then open the root URL, click **Try the demo**, and ask "What was net income in FY2024?".
+The answer should quote `sample_financials.csv` with a citation. Always open the URL printed
+by the *latest* `vercel deploy` (older URLs keep serving the older build), and check on the
+Deployments tab that the commit is the one you expect.
 
 ## Limits of this deployment
 

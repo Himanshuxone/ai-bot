@@ -3,9 +3,9 @@
 | | |
 |---|---|
 | **Product** | FinRAG: question answering over financial documents |
-| **Version** | 1.0 (as built); sections marked *Proposed* are not implemented |
-| **Status** | Implemented in PR #1; this PRD records intent, scope and open questions |
-| **Related** | [Architecture](Architecture.md) · [Security](Security.md) · [Testing](Testing.md) · [Design System](Design_System.md) · [Agents](Agents.md) |
+| **Version** | 1.2 (as built); sections marked *Proposed* are not implemented |
+| **Status** | Implemented and deployed as a public demo on Vercel; this PRD records intent, scope and open questions |
+| **Related** | [Architecture](Architecture.md) · [Security](Security.md) · [Testing](Testing.md) · [Design System](Design_System.md) · [Agents](Agents.md) · [Go-to-Market](GoToMarket.md) |
 
 > **Reading guide.** Requirements marked **Built** are implemented and tested.
 > **Proposed** means the idea is documented but no code exists. Anything stated as a
@@ -143,6 +143,7 @@ These are targets to agree with stakeholders. They are **not** measured today.
 |---|---|
 | **1.0 (this PR)** | Everything marked **Built** above |
 | **1.1** | Web UI (this change): sign-in, upload, ask, citations, document library, privacy tools, About page; `scripts/demo.py` launcher |
+| **1.2** | Public demo mode (per-visitor temporary workspaces with synthetic samples, offline only), Vercel deployment, embedded UI/sample assets for Python-only bundles, UI served at `/`, `/ui`, `/ui/` without redirects, startup errors reported clearly |
 | **Next (Proposed)** | NER-based PII detector plug-in; OCR for scanned PDFs; evaluation set for answer quality; structured metrics; streaming answers; SSO |
 | **Later (Proposed)** | Self-hosted embedding model and vector database (see [Architecture](Architecture.md)); multi-node deployment; SSO |
 
@@ -157,7 +158,18 @@ These are targets to agree with stakeholders. They are **not** measured today.
 | Master key lost | All stored data unreadable | Key held in a secret manager with backup (deployer's duty) | Operational |
 | Misuse for individual decisions | EU AI Act high-risk obligations | Blocked in code and documented as excluded use | Reduced |
 
-## 11. Open questions
+## 11. Commercial plan
+
+How the product is positioned, priced and sold (ideal customers, packaging, sales
+process, marketing channels, objection handling and a 30-day checklist) is in
+[GoToMarket.md](GoToMarket.md). All prices, targets and conversion figures there are
+hypotheses to validate with design partners, not measured results.
+
+Product requirements that sales is likely to pull forward (all *Proposed*): OCR for scanned
+PDFs, NER-based PII detection, persistent encrypted storage with backups, SSO, an answer
+quality evaluation set, and aggregate (content-free) usage metrics for the demo.
+
+## 12. Open questions
 
 1. Which organisation is the data controller, and who signs the DPA with the LLM provider?
 2. Is `legitimate_interests` an acceptable default lawful basis, or should the choice be

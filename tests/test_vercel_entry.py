@@ -115,3 +115,29 @@ def test_function_address_redirects_to_ui(monkeypatch, tmp_path):
     spec.loader.exec_module(module)
     response = TestClient(module.app).get("/api/index", follow_redirects=False)
     assert response.status_code == 307 and response.headers["location"] == "/ui/"
+
+
+def test_path_guard_strips_function_prefix_and_reports_path(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("FINRAG_DATA_DIR", str(tmp_path))
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "path_guard_probe", Path(__file__).resolve().parents[1] / "api" / "index.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    client = TestClient(module.app)
+    response = client.get("/api/index/healthz")
+    assert response.status_code == 200
+    assert "used='/healthz'" in response.headers["x-finrag-path"]
+
+
+def test_vercel_json_uses_framework_routing_not_a_rewrite():
+    # A rewrite to /api/index makes the function see "/api/index" for every request.
+    import json
+
+    config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+    assert config.get("framework") == "fastapi"
+    assert "rewrites" not in config and "routes" not in config

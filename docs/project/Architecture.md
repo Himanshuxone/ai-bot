@@ -195,7 +195,7 @@ GDPR validation → `Pseudonymiser.pseudonymise` → `chunk_sections` → `scree
 | Aspect | Current design |
 |---|---|
 | Packaging | `Dockerfile`: `python:3.12-slim`, non-root user (uid 10001), `/data` volume (0700) |
-| Process | `uvicorn finrag.api:app`; one process, state held in local files; serves the UI at `/ui/` and redirects `/` there |
+| Process | `uvicorn finrag.api:app`; one process, state held in local files; serves the web app at `/`, `/ui` and `/ui/` (all return the page directly; no redirects, so hosts that rewrite slashes cannot loop) |
 | Local demo | `python scripts/demo.py` creates a key, demo users and a data directory under `data/demo/` (development only) |
 | TLS | Terminated at a reverse proxy; the app sets HSTS but does not serve TLS itself |
 | Secrets | `FINRAG_MASTER_KEY`, `ANTHROPIC_API_KEY`, API-key hash file injected at runtime; never in the image |
