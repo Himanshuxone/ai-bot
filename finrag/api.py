@@ -354,3 +354,8 @@ if settings.web_ui and (assets.web_dir() is not None or assets.embedded_web_avai
     def root() -> RedirectResponse:
         """Send browsers to the web app."""
         return RedirectResponse("/ui/")
+else:
+    @app.get("/", include_in_schema=False)
+    def root_info() -> dict[str, str]:
+        """Say what this service is when the web UI is switched off or unavailable."""
+        return {"service": "finrag", "ui": "disabled or not packaged", "health": "/healthz"}
