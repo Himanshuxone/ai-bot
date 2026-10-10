@@ -87,13 +87,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     from finrag.config import get_settings
-    from finrag.governance import transparency
-    from finrag.pipeline import FinRAGPipeline
-
     from finrag.generation.llm import LLMUnavailableError
+    from finrag.governance import transparency
     from finrag.governance.gdpr import ComplianceError
     from finrag.ingestion.loaders import UnsupportedDocumentError
-    from finrag.pipeline import RateLimitExceeded
+    from finrag.pipeline import FinRAGPipeline, RateLimitExceeded
     from finrag.security.access import AccessDenied
 
     pipeline = FinRAGPipeline(get_settings())

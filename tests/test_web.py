@@ -39,7 +39,7 @@ def _make_client(tmp_path, monkeypatch, **extra_env):
         monkeypatch.setenv(key, value)
     from finrag import config
     config.get_settings.cache_clear()
-    import finrag.api as api
+    from finrag import api
     importlib.reload(api)
     return TestClient(api.app), config
 
@@ -114,7 +114,7 @@ def test_index_html_has_no_inline_code_or_third_party_hosts():
     html = (WEB / "index.html").read_text(encoding="utf-8")
     assert not re.search(r"\son[a-z]+\s*=", html), "inline event handler"
     assert not re.search(r"\sstyle\s*=", html), "inline style attribute"
-    assert not re.search(r"javascript:", html, re.I)
+    assert not re.search(r"javascript:", html, re.IGNORECASE)
     for script in re.findall(r"<script\b[^>]*>", html):
         assert "src=" in script, "inline <script>"
     assert not re.search(r"""(src|href)=["']https?://""", html), "third-party resource"
@@ -130,5 +130,6 @@ def test_no_inline_styles_set_via_attribute_in_js():
 @pytest.mark.parametrize("path", JS_FILES, ids=lambda p: p.name)
 def test_js_syntax_is_valid(path):
     result = subprocess.run(["node", "--input-type=module", "--check"],
-                            input=path.read_text(encoding="utf-8"), capture_output=True, text=True)
+                            input=path.read_text(encoding="utf-8"), capture_output=True, text=True,
+                            check=False)
     assert result.returncode == 0, result.stderr

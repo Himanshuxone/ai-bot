@@ -17,4 +17,4 @@ from pathlib import Path
 # Make the repository root importable (this file lives in api/).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from finrag.api import app  # noqa: E402,F401  (re-exported for the Vercel runtime)
+from finrag.api import app  # noqa: F401  (re-exported for the Vercel runtime)

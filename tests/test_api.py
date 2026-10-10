@@ -27,7 +27,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("FINRAG_API_KEYS_FILE", str(keys_file))
     from finrag import config
     config.get_settings.cache_clear()
-    import finrag.api as api
+    from finrag import api
     importlib.reload(api)
     yield TestClient(api.app)
     config.get_settings.cache_clear()

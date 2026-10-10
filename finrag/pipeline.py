@@ -44,12 +44,12 @@ from finrag.generation.prompts import SYSTEM_CANARY, PromptSource
 from finrag.governance import gdpr, transparency
 from finrag.ingestion.chunker import chunk_sections
 from finrag.ingestion.loaders import UnsupportedDocumentError, load_document
+from finrag.retrieval.store import ChunkRecord, DocumentRecord, TenantStore, validate_tenant
 from finrag.security import guardrails
 from finrag.security.access import AccessDenied, Permission, Principal, RateLimiter
 from finrag.security.audit import AuditLog
 from finrag.security.crypto import DecryptionError, Encryptor, KeyRing
 from finrag.security.pii import PIIDetector, Pseudonymiser, PseudonymVault, redact
-from finrag.retrieval.store import ChunkRecord, DocumentRecord, TenantStore, validate_tenant
 
 logger = logging.getLogger(__name__)
 

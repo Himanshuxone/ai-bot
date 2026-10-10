@@ -54,7 +54,7 @@ def server(tmp_path_factory):
                       FINRAG_API_KEYS_FILE=str(tmp / "keys.json"))
     from finrag import config
     config.get_settings.cache_clear()
-    import finrag.api as api
+    from finrag import api
     importlib.reload(api)
 
     with socket.socket() as sock:

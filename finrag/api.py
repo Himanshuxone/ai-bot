@@ -34,8 +34,13 @@ from finrag.generation.llm import LLMUnavailableError
 from finrag.governance import gdpr, transparency
 from finrag.ingestion.loaders import UnsupportedDocumentError
 from finrag.pipeline import FinRAGPipeline, RateLimitExceeded
-from finrag.security.access import (AccessDenied, APIKeyAuthenticator, Permission, Principal,
-                                    RateLimiter)
+from finrag.security.access import (
+    AccessDenied,
+    APIKeyAuthenticator,
+    Permission,
+    Principal,
+    RateLimiter,
+)
 
 logger = logging.getLogger("finrag.api")
 settings = get_settings()

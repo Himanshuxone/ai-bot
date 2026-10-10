@@ -129,10 +129,14 @@ def records_of_processing(settings: Settings) -> dict[str, Any]:
             "audit_log_days": max(settings.audit_retention_days, 183),
         },
         "security_measures": [
-            "keyed pseudonymisation before storage", "AES/Fernet encryption at rest with "
-            "HKDF-separated keys", "RBAC with hashed API keys", "tamper-evident audit log",
-            "prompt-injection and output guardrails", "rate limiting", "TLS in transit "
-            "(terminated at the reverse proxy)"],
+            "keyed pseudonymisation before storage",
+            "AES/Fernet encryption at rest with HKDF-separated keys",
+            "RBAC with hashed API keys",
+            "tamper-evident audit log",
+            "prompt-injection and output guardrails",
+            "rate limiting",
+            "TLS in transit (terminated at the reverse proxy)",
+        ],
     }
 
 

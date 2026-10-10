@@ -118,7 +118,7 @@ class Settings(BaseSettings):
         return value
 
     @model_validator(mode="after")
-    def _demo_is_offline(self) -> "Settings":
+    def _demo_is_offline(self) -> Settings:
         # [RULE: GDPR-ART44] [RULE: OWASP-LLM10] A public demo never calls an external AI
         # provider: no visitor content leaves the host and nobody can run up API costs.
         if self.demo_mode and self.llm_provider is not LLMProvider.OFFLINE:

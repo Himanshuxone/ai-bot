@@ -29,7 +29,7 @@ def _client(tmp_path, monkeypatch, demo: bool = True, **env):
         monkeypatch.setenv(k, v)
     from finrag import config
     config.get_settings.cache_clear()
-    import finrag.api as api
+    from finrag import api
     importlib.reload(api)
     return TestClient(api.app), api, config
 

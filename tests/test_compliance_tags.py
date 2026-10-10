@@ -41,5 +41,5 @@ def test_compliance_matrix_is_fresh():
     import sys
 
     result = subprocess.run([sys.executable, str(ROOT / "scripts" / "compliance_report.py"),
-                             "--check"], capture_output=True, text=True)
+                             "--check"], capture_output=True, text=True, check=False)
     assert result.returncode == 0, "run: python scripts/compliance_report.py"

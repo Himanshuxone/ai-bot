@@ -101,7 +101,7 @@ def seed_samples(pipeline: FinRAGPipeline, principal: Principal) -> int:
                             lawful_basis="legitimate_interests", purpose="financial_analysis",
                             retention_days=1)
             loaded += 1
-        except Exception as exc:  # noqa: BLE001 - a failed sample must not break sign-in
+        except Exception as exc:
             # [RULE: SEC-LOGGING] Log only the exception type.
             logger.error("could not load demo sample %s: %s", name, type(exc).__name__)
     return loaded

@@ -97,7 +97,7 @@ class APIKeyAuthenticator:
         self._entries = entries
 
     @classmethod
-    def from_file(cls, path: Path) -> "APIKeyAuthenticator":
+    def from_file(cls, path: Path) -> APIKeyAuthenticator:
         """Load hashed keys from a JSON file."""
         return cls(json.loads(path.read_text(encoding="utf-8")))
 
