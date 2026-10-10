@@ -267,6 +267,7 @@ Controls are tagged in comments, for example:
 
 | Document | What it gives you |
 |---|---|
+| [docs/project/](docs/project/) | Project documents: [PRD](docs/project/PRD.md), [Design System](docs/project/Design_System.md), [Architecture](docs/project/Architecture.md), [Security](docs/project/Security.md), [Code Style](docs/project/CODE_STYLE.md), [Testing](docs/project/Testing.md), [Agents](docs/project/Agents.md) |
 | [docs/RAG_FLOW.md](docs/RAG_FLOW.md) | UML class, activity and sequence diagrams plus a user flow, mapping every RAG step (chunking, vectorising, matching, LLM call) to its function and file |
 | [docs/COMPLIANCE.md](docs/COMPLIANCE.md) | Article-by-article explanation for GDPR, EU AI Act, PII standard, OWASP LLM Top 10, AppSec, plus the organisational measures you still need |
 | [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) | Generated table: every rule → every `file:line` that implements it |
