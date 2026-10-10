@@ -66,7 +66,7 @@ Roles are defined in code (`finrag/security/access.py`, `ROLE_PERMISSIONS`).
 - NG2. **Decisions about individuals** (credit scoring, lending, hiring, insurance
   pricing). These are blocked (EU AI Act Annex III; GDPR Art. 22).
 - NG3. **OCR of scanned documents.** Text must already be extractable.
-- NG4. **A web user interface.** Version 1.0 exposes a CLI and an HTTP API only.
+- NG4. **A hosted, multi-user SaaS front end.** The built-in web UI is a single-page app served by the same process, with API-key sign-in; there is no SSO, user management or billing.
 - NG5. **Very large corpora.** The built-in index is designed for thousands of chunks per
   tenant (see [Architecture](Architecture.md)).
 - NG6. **Replacing a DPIA or legal review.** FinRAG supplies technical controls; the
@@ -87,7 +87,9 @@ Roles are defined in code (`finrag/security/access.py`, `ROLE_PERMISSIONS`).
 | U9 | admin | verify that the audit log was not altered | I can trust it as evidence | Built |
 | U10 | developer | call the API with an API key and get JSON | I can integrate FinRAG | Built |
 | U11 | analyst | upload a scanned PDF | I do not have to OCR it first | Proposed |
-| U12 | viewer | use a web page instead of the API | non-technical users can self-serve | Proposed |
+| U12 | viewer | use a web page instead of the API | non-technical users can self-serve | Built (web UI at `/ui/`) |
+| U13 | analyst | upload several files at once and see what happened to each | I can load a document set quickly and spot rejected files | Built |
+| U14 | any user | see clearly whether an answer needs checking, and open the cited source in one click | I can verify figures without hunting | Built |
 
 ## 6. Functional requirements
 
@@ -108,6 +110,7 @@ Each requirement lists where it is implemented and tested. Rule IDs refer to
 | FR10 | Provide export, erasure, document deletion and retention purge | `finrag/pipeline.py` | `test_pipeline.py` |
 | FR11 | Log every operation to a tamper-evident audit log without raw PII | `finrag/security/audit.py` | `test_pipeline.py::test_audit_chain_and_scrubbing` |
 | FR12 | Authenticate by API key, authorise by role, rate-limit per principal | `finrag/security/access.py`, `finrag/api.py` | `test_security_core.py`, `test_api.py` |
+| FR13 | Provide a browser UI to upload files, ask questions, open citations and run role-permitted privacy tasks; render model output as text only; strict CSP | `finrag/web/`, `finrag/api.py` (`/ui`, `/v1/me`) | `test_web.py`, `test_ui_e2e.py` |
 
 ## 7. Non-functional requirements
 
@@ -139,7 +142,8 @@ These are targets to agree with stakeholders. They are **not** measured today.
 | Release | Scope |
 |---|---|
 | **1.0 (this PR)** | Everything marked **Built** above |
-| **Next (Proposed)** | NER-based PII detector plug-in; OCR for scanned PDFs; evaluation set for answer quality; structured metrics; web UI |
+| **1.1** | Web UI (this change): sign-in, upload, ask, citations, document library, privacy tools, About page; `scripts/demo.py` launcher |
+| **Next (Proposed)** | NER-based PII detector plug-in; OCR for scanned PDFs; evaluation set for answer quality; structured metrics; streaming answers; SSO |
 | **Later (Proposed)** | Self-hosted embedding model and vector database (see [Architecture](Architecture.md)); multi-node deployment; SSO |
 
 ## 10. Risks
@@ -159,6 +163,6 @@ These are targets to agree with stakeholders. They are **not** measured today.
 2. Is `legitimate_interests` an acceptable default lawful basis, or should the choice be
    restricted by tenant policy?
 3. What retention period fits each document type (default is 90 days)?
-4. Is a web UI needed for the first deployment, or is the API enough?
+4. Is the built-in web UI enough for the first deployment, or is SSO or a separate front end needed?
 5. What accuracy bar must answers meet, and who owns the evaluation set?
 6. Do we need SSO instead of API keys?

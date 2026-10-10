@@ -30,6 +30,7 @@ Shape of the code:
 finrag/
   pipeline.py      # the single entry point (ingest, ask, erase, export, purge)
   api.py  cli.py   # interfaces; call only the pipeline
+  web/             # browser UI (index.html, styles.css, js/); a client of the HTTP API
   config.py        # typed settings (FINRAG_* env vars)
   security/        # crypto, pii, guardrails, access, audit
   ingestion/       # loaders (safe parsing), chunker
@@ -45,11 +46,12 @@ tests/  docs/  scripts/  samples/
 ```bash
 pip install -r requirements-dev.txt
 
-pytest -q                                       # run tests (about 71, offline, a few seconds)
+pytest -q                                       # run tests (97; offline; browser tests skip without Chromium)
 ruff check finrag tests scripts                 # lint
 python scripts/compliance_report.py             # regenerate docs/COMPLIANCE_MATRIX.md
 python scripts/compliance_report.py --check     # verify it is current (CI does this)
 
+python scripts/demo.py                           # run the web UI locally with demo users (dev only)
 python -m finrag.cli keygen                     # new master key
 python -m finrag.cli --help                     # CLI
 uvicorn finrag.api:app --reload                 # dev API (needs FINRAG_API_KEYS_FILE to authenticate)
@@ -81,6 +83,7 @@ stop and ask.
    compliance claim. Do not delete tests, skip them, or loosen assertions to get green.
 9. **Do not commit secrets or data**: `.env`, `keys.json`, `data/`, `*.enc`, `audit.log`.
 10. **Do not state unbuilt features as built.** Mark ideas **Proposed** in documentation.
+11. **UI code: no HTML-parsing sinks, no inline code, no third-party hosts.** Build DOM with `h()` and `textContent` from `js/dom.js`; never `innerHTML`, `eval`, inline `style=` or `on*=` attributes, CDN scripts or web fonts. `tests/test_web.py` enforces this.
 
 ## 4. Workflow for a change
 
@@ -141,6 +144,19 @@ stop and ask.
 3. `python scripts/compliance_report.py` and commit the matrix. CI fails if a registered
    rule has no implementing tag.
 
+### Change the web UI
+
+1. Work in `finrag/web/`. Colours, spacing and type come from the tokens at the top of
+   `styles.css`; add a token rather than a raw value, and recheck contrast for both themes.
+2. Build elements with `h()` and `icon()`; show untrusted text only via `textContent`.
+3. A new screen is a module in `js/views/` with `render(root, ctx)`, registered in `ROUTES`
+   in `js/main.js` with an `allowed` check. The server must enforce the same permission.
+4. Handle loading, empty, error and disabled states; pair colour with an icon and text; keep
+   touch targets at least 44 px; test at 375 px width and in dark mode.
+5. Run `pytest tests/test_web.py`, then `python scripts/demo.py` and try it in a browser. If
+   Chromium is available also run `tests/test_ui_e2e.py`.
+6. Update [Design System](Design_System.md) if you change a token, pattern or component.
+
 ### Swap the retrieval backend
 
 Keep the `TenantStore.search(query, top_k)` contract. Embed only pseudonymised text, keep
@@ -168,6 +184,10 @@ real API in tests.
   as complete or guaranteed.
 - State lives in local files with in-process locks: assume one instance per data
   directory.
+- The UI page's CSP forbids `eval`, so browser-automation helpers that evaluate strings
+  (for example Playwright `wait_for_function`) fail; wait on selectors instead.
+- `GET /v1/me` is the UI's source of truth for permissions and option lists; when you add a
+  permission or an enum value, expose it there so the UI does not hard-code it.
 - Case-insensitive file systems: `docs/ARCHITECTURE.md` and `docs/project/Architecture.md`
   live in different directories on purpose. Do not move them into the same directory.
 

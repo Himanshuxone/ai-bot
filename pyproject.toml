@@ -29,6 +29,9 @@ finrag = "finrag.cli:main"
 [tool.setuptools.packages.find]
 include = ["finrag*"]
 
+[tool.setuptools.package-data]
+finrag = ["web/*", "web/js/*", "web/js/views/*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="no-referrer">
+  <title>FinRAG: ask your financial documents</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <!--
+    No inline scripts or styles, and no third-party hosts: the Content-Security-Policy
+    for /ui only allows same-origin files.  [RULE: SEC-HEADERS] [RULE: OWASP-LLM05]
+  -->
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- Sign-in -->
+  <div id="login-view" class="login" hidden>
+    <form class="card" id="login-form" novalidate>
+      <div class="brand" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>FinRAG</div>
+      <div>
+        <h1 id="login-title" tabindex="-1">Sign in</h1>
+        <p class="muted">Ask questions about your organisation's financial documents.</p>
+      </div>
+
+      <div class="banner info" role="note">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        <div>
+          <strong>You are using an AI system</strong>
+          Answers are generated automatically from your documents and can contain errors.
+          Check important figures against the cited sources. Not investment, tax or legal advice.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="api-key">API key <span class="req" aria-hidden="true">*</span></label>
+        <div class="input-with-button">
+          <input id="api-key" name="api-key" type="password" autocomplete="current-password"
+                 spellcheck="false" autocapitalize="off" required aria-describedby="api-key-help api-key-error">
+          <button type="button" class="btn btn-icon" id="toggle-key" aria-label="Show API key" aria-pressed="false"></button>
+        </div>
+        <p class="help" id="api-key-help">Ask your administrator for a key. It is kept only in this browser tab and is cleared when you close it.</p>
+        <p class="error-text" id="api-key-error" role="alert" hidden></p>
+      </div>
+
+      <button class="btn btn-primary" type="submit" id="login-submit">Sign in</button>
+    </form>
+  </div>
+
+  <!-- Application shell -->
+  <div id="shell" class="shell" hidden>
+    <header class="topbar">
+      <div class="brand"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>FinRAG</span></div>
+      <span class="badge" id="mode-badge"></span>
+      <span class="spacer"></span>
+      <div class="who small" id="who"></div>
+      <button class="btn btn-icon btn-ghost" id="theme-toggle" type="button"></button>
+      <button class="btn btn-icon btn-ghost" id="signout" type="button" aria-label="Sign out" title="Sign out"></button>
+    </header>
+    <nav class="nav" id="nav" aria-label="Main"></nav>
+    <main id="main"></main>
+  </div>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <div class="visually-hidden" id="live" aria-live="polite" aria-atomic="true"></div>
+
+  <dialog id="confirm" aria-labelledby="confirm-title" aria-describedby="confirm-body">
+    <h2 id="confirm-title"></h2>
+    <p id="confirm-body" class="muted"></p>
+    <div class="actions">
+      <button class="btn" type="button" id="confirm-cancel">Cancel</button>
+      <button class="btn btn-danger" type="button" id="confirm-ok">Confirm</button>
+    </div>
+  </dialog>
+
+  <noscript><p class="noscript">FinRAG needs JavaScript to run.</p></noscript>
+</body>
+</html>

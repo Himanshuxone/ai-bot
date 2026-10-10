@@ -364,7 +364,8 @@ sequenceDiagram
 
 ## 8. User flow diagram
 
-What each type of user does, and what they see at every decision point.
+What each type of user does, and what they see at every decision point. Users reach these steps through the web UI (`/ui/`, screens Ask, Documents,
+Privacy and About), the HTTP API or the CLI; the UI calls the same endpoints as any API client.
 
 ```mermaid
 flowchart TD

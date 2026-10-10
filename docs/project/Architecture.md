@@ -39,7 +39,9 @@ Anthropic API, and only when `FINRAG_LLM_PROVIDER=anthropic`.
 ## 3. Layers and responsibilities
 
 ```
-Interfaces       finrag/api.py (FastAPI)          finrag/cli.py
+Interfaces       finrag/web/ (browser UI, static files)
+                         |  HTTP + X-API-Key
+                 finrag/api.py (FastAPI)          finrag/cli.py
                           \                         /
 Orchestration            finrag/pipeline.py  (single entry point)
                                   |
@@ -48,13 +50,14 @@ Cross-cutting     security/ (crypto · pii · guardrails · access · audit)
 Foundation        config.py · compliance/rules.py
 ```
 
-**Dependency rule:** arrows point downwards only. `pipeline.py` may call any domain
+**Dependency rule:** arrows point downwards only. The web UI is a client of the HTTP API and shares no code with the Python side. `pipeline.py` may call any domain
 service; domain services never call `pipeline.py`, `api.py` or `cli.py`. `security/` and
 `config.py` depend on nothing above them. There is no "raw" bypass: the API and CLI reach
 data only through `FinRAGPipeline`, which applies every control.
 
 | Package | Owns |
 |---|---|
+| `web/` | Browser UI: `index.html`, `styles.css`, ES modules in `js/` (no framework, no build step); calls only the HTTP API |
 | `ingestion/` | Parsing files safely (`loaders.py`), splitting into chunks (`chunker.py`) |
 | `retrieval/` | Encrypted per-tenant store (`store.py`), local hybrid index (`index.py`) |
 | `generation/` | Prompt construction (`prompts.py`), Claude and offline generators (`llm.py`) |
@@ -172,12 +175,28 @@ GDPR validation → `Pseudonymiser.pseudonymise` → `chunk_sections` → `scree
   exists. Errors to clients are generic.
 - **Rules.** `SEC-ERROR-HANDLING`, `GDPR-ART33`.
 
+### ADR-9: A dependency-free web UI served by the API process
+
+- **Context.** Users need to upload files and ask questions without writing HTTP calls.
+  A strict Content-Security-Policy and a small attack surface matter more here than
+  framework convenience.
+- **Decision.** Plain HTML, CSS and ES modules in `finrag/web/`, served by FastAPI under
+  `/ui/` and switchable with `FINRAG_WEB_UI`. No bundler, no CDN, no third-party fonts or
+  scripts. The UI talks to the same `/v1/*` endpoints as any client; `GET /v1/me` tells it the
+  role, permissions and valid option lists (lawful bases, purposes, limits).
+- **Consequences.** (+) Same origin means no CORS configuration and no cookies, so no CSRF
+  surface; the CSP can forbid inline code entirely; nothing to build or audit beyond our
+  own files. (−) More hand-written DOM code than a framework would need; no component
+  library; client-side state is simple by design (in-memory conversation).
+- **Rules.** `SEC-HEADERS`, `OWASP-LLM05`, `SEC-AUTHZ`, `GDPR-ART25`.
+
 ## 7. Deployment
 
 | Aspect | Current design |
 |---|---|
 | Packaging | `Dockerfile`: `python:3.12-slim`, non-root user (uid 10001), `/data` volume (0700) |
-| Process | `uvicorn finrag.api:app`; one process, state held in local files |
+| Process | `uvicorn finrag.api:app`; one process, state held in local files; serves the UI at `/ui/` and redirects `/` there |
+| Local demo | `python scripts/demo.py` creates a key, demo users and a data directory under `data/demo/` (development only) |
 | TLS | Terminated at a reverse proxy; the app sets HSTS but does not serve TLS itself |
 | Secrets | `FINRAG_MASTER_KEY`, `ANTHROPIC_API_KEY`, API-key hash file injected at runtime; never in the image |
 | Scheduling | `purge` command or endpoint run daily by cron / CronJob |

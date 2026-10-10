@@ -16,7 +16,8 @@ TAG = re.compile(r"\[RULE:\s*([A-Z0-9-]+)\]")
 
 def _tags() -> dict[str, list[str]]:
     found: dict[str, list[str]] = {}
-    for path in (ROOT / "finrag").rglob("*.py"):
+    sources = [p for p in (ROOT / "finrag").rglob("*") if p.suffix in (".py", ".js", ".html")]
+    for path in sources:
         for lineno, line in enumerate(path.read_text().splitlines(), start=1):
             for rule in TAG.findall(line):
                 found.setdefault(rule, []).append(f"{path.relative_to(ROOT)}:{lineno}")

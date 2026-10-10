@@ -91,6 +91,11 @@ class Settings(BaseSettings):
     # [RULE: EUAIA-ART14] Answers below this confidence are flagged for review.
     review_confidence_threshold: float = 0.55
 
+    # ----------------------------------------------------------------- web UI
+    # [RULE: GDPR-ART25] The browser UI is served by the API process. It holds no
+    # data itself, but operators can switch it off for API-only deployments.
+    web_ui: bool = True
+
     # -------------------------------------------------------------- API auth
     # [RULE: SEC-AUTHN] Path to a JSON file of hashed API keys (see README).
     api_keys_file: Path | None = None

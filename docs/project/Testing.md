@@ -1,7 +1,7 @@
 # Testing: FinRAG
 
 Strategy, current coverage, how to run the tests, and the gaps. Numbers below were
-checked against the repository when this document was written: **71 tests, all passing**.
+checked against the repository when this document was written: **97 tests, all passing** (3 of them are browser tests that skip themselves when Playwright or Chromium is unavailable).
 
 Related: [PRD](PRD.md) · [Security](Security.md) · [Code Style](CODE_STYLE.md) · [Agents](Agents.md)
 
@@ -45,8 +45,10 @@ Typical run time is a few seconds.
 | `tests/test_security_core.py` | 10 | Production requires a master key, short key rejected, tamper detection, API-key auth, rate limiter, tenant-id validation |
 | `tests/test_api.py` | 6 | 401 without or with a wrong key, security headers, public transparency endpoint, upload then query, viewer cannot upload (403), bad file rejected (422) |
 | `tests/test_llm.py` | 2 | Request shape sent to the Anthropic SDK (model, system prompt, adaptive thinking, fallbacks, no tools, fenced sources) and refusal handling, using a fake client |
+| `tests/test_web.py` | 23 | UI files served and `/` redirect; strict UI CSP while the API keeps `default-src 'none'`; `/v1/me` requires a key and reflects role permissions; UI can be disabled; static scan of every JS file for forbidden patterns (`innerHTML`, `eval`, inline styles, sensitive data in `localStorage`); `index.html` has no inline code or third-party hosts and zoom is not disabled; JS syntax valid |
+| `tests/test_ui_e2e.py` | 3 | Real browser (Playwright, Chromium): wrong key rejected inline; analyst signs in, GDPR fields validated, uploads a CSV, asks, opens a citation, injection attempt is blocked, no console errors; viewer sees only Ask and About |
 | `tests/test_compliance_tags.py` | 3 | Every `[RULE: …]` tag is registered, every registered rule has an implementation tag, `docs/COMPLIANCE_MATRIX.md` is current |
-| **Total** | **71** | |
+| **Total** | **97** | |
 
 Shared fixtures are in `tests/conftest.py`: `settings` (temp data dir, fresh master key,
 high rate limit), `pipeline` (offline generator), the principals `analyst`, `dpo`,
@@ -61,7 +63,9 @@ high rate limit), `pipeline` (offline generator), the principals `analyst`, `dpo
 | **Component / integration** | `test_pipeline` | Real pipeline, real encryption and files in a temp directory, offline generator or a stub |
 | **API** | `test_api` | FastAPI `TestClient`; the module is reloaded with test environment variables |
 | **Contract** | `test_llm` | Asserts what is sent to the SDK; does not call the network |
-| **Governance** | `test_compliance_tags` | Keeps rule tags and the matrix honest |
+| **Governance** | `test_compliance_tags` | Keeps rule tags and the matrix honest (scans `.py`, `.js` and `.html`) |
+| **UI static safety** | `test_web` | Fails the build on HTML-parsing sinks, inline code, third-party hosts |
+| **UI end to end** | `test_ui_e2e` | Needs Playwright and Chromium; skipped otherwise |
 
 ## 5. Requirement-to-test traceability
 
@@ -100,7 +104,20 @@ high rate limit), `pipeline` (offline generator), the principals `analyst`, `dpo
    event), not implementation details.
 8. If the change adds or moves `[RULE: …]` tags, regenerate the matrix.
 
-## 7. Known gaps
+## 7. Running the browser tests
+
+```bash
+pip install playwright                    # does not download browsers
+PLAYWRIGHT_CHROMIUM=/path/to/chrome pytest tests/test_ui_e2e.py -q
+```
+
+The test starts the app on a free port with a temporary data directory and two API keys, so
+it never touches `data/`. It looks for Chromium in `PLAYWRIGHT_CHROMIUM` and then in
+`/opt/pw-browsers`. For manual checks run `python scripts/demo.py` and use the demo keys.
+When writing UI tests remember the page's CSP forbids `eval`, so avoid
+`page.wait_for_function` with string expressions; wait on selectors instead.
+
+## 8. Known gaps
 
 These are real and are not covered today. They are the next candidates for tests.
 
@@ -119,8 +136,10 @@ These are real and are not covered today. They are the next candidates for tests
 | **No red-team suite for prompt injection** | Detectors are heuristic; coverage beyond a few examples is unknown |
 | **No coverage measurement or mutation testing** | Test strength is unquantified |
 | **No type checking in CI** | Annotations are not machine-verified |
+| **Browser tests cover three flows only and are not run in CI** | Document deletion, privacy tools, dark theme, mobile layout, drag and drop and error banners were exercised by hand during development, not by committed tests |
+| **No automated accessibility or visual-regression checks** | Contrast was verified by a one-off script; keyboard and screen-reader behaviour was reviewed, not machine-checked |
 
-## 8. Proposed additions
+## 9. Proposed additions
 
 - Add `pytest-cov` and publish coverage in CI; set a baseline and prevent regression.
 - Build a small labelled **evaluation set**: questions over the sample documents with
@@ -135,7 +154,7 @@ These are real and are not covered today. They are the next candidates for tests
   pass rate.
 - Run `mypy` or `pyright` in CI.
 
-## 9. Manual verification checklist (before a release)
+## 10. Manual verification checklist (before a release)
 
 Offline mode, using the bundled samples:
 
@@ -159,7 +178,7 @@ With Claude enabled (`FINRAG_LLM_PROVIDER=anthropic`, `ANTHROPIC_API_KEY` set), 
 the questions and confirm answers still carry `[S#]` citations and the AI disclosure.
 This makes real API calls.
 
-## 10. Continuous integration
+## 11. Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request:
 

@@ -157,7 +157,22 @@ python scripts/compliance_report.py --check
 
 All must pass; CI runs the same commands plus `pip-audit`.
 
-## 11. Git and pull requests
+## 11. JavaScript and CSS (web UI)
+
+| Topic | Rule |
+|---|---|
+| Language | Plain ES modules, no build step, no framework, no TypeScript; browsers must run the files as written |
+| Style | 2-space indent, double quotes, semicolons, `const` by default, `async`/`await`, small functions |
+| DOM | Create nodes with `h(tag, attrs, ...children)` from `js/dom.js`. Untrusted text goes in as `textContent` or text nodes only |
+| Forbidden | `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `document.write`, `eval`, `new Function`, string `setTimeout`, inline `style=` and `on*=` attributes, third-party scripts, styles or fonts (enforced by `tests/test_web.py`) |
+| Storage | `sessionStorage` for the API key only; `localStorage` for the theme only; never store questions, answers or document text |
+| Comments | A header comment per module saying what the screen does and which `[RULE: ID]` tags it implements; why-comments for non-obvious choices |
+| Accessibility | Every control has a visible or accessible name; status uses colour plus an icon plus text; focus is visible and managed on route change; touch targets at least 44 px |
+| CSS | Tokens in `:root` (and the dark overrides); components reference tokens only; mobile-first with `min-width` breakpoints at 768 and 1024 px; no `!important` except the reduced-motion rule |
+| Naming | `kebab-case` CSS classes, `camelCase` JS, `snake_case` only for API field names |
+| Errors | Show a message that says what happened and what to do, next to the thing that failed; never show raw server errors or stack traces |
+
+## 12. Git and pull requests
 
 - Small, focused commits with an imperative summary line ("Add retention purge"), a blank
   line, then the why.
@@ -168,7 +183,7 @@ All must pass; CI runs the same commands plus `pip-audit`.
 - Documentation changes that describe behaviour must be updated in the same PR as the
   behaviour.
 
-## 12. Documentation style
+## 13. Documentation style
 
 - Markdown, ATX headings (`#`), tables for structured comparisons, fenced code blocks
   with a language tag.

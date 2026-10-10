@@ -33,6 +33,7 @@ Related: [PRD](PRD.md) · [Architecture](Architecture.md) · [Testing](Testing.m
 | Host → LLM provider | Excerpts | Pseudonymised only, no tools, offline by default |
 | LLM → user | Model output | Canary, PII redaction, citation and figure checks |
 | Process → disk | Everything persisted | Fernet encryption, atomic 0600 writes |
+| Browser page → API | Any script running in the page, model output shown on screen | Same-origin CSP (no inline code, no third-party hosts, no `eval`), text-only rendering, key in `sessionStorage` |
 
 ## 2. Threat model (STRIDE)
 
@@ -44,6 +45,7 @@ Related: [PRD](PRD.md) · [Architecture](Architecture.md) · [Testing](Testing.m
 | **I**nformation disclosure | PII in logs, answers or prompts; cross-tenant read | Pseudonymisation, redaction, tenant isolation | `test_no_raw_pii_on_disk`, `test_tenant_isolation` |
 | **D**enial of service | Huge upload, zip bomb, query flood | Size/page/row caps, zip-ratio check, rate limit, `max_tokens` | `test_loaders.py`, `test_security_core.py::test_rate_limiter` |
 | **E**levation of privilege | Viewer ingests; analyst re-identifies | Deny-by-default RBAC | `test_pipeline.py::test_rbac`, `test_api.py` |
+| **XSS via model or document text** | A malicious document makes the model emit `<script>` or an HTML payload that the page then runs | DOM built with `textContent`, no HTML-parsing sinks, strict CSP, answer markup stripped server-side | `test_web.py::test_no_unsafe_patterns_in_js`, `test_ui_csp_is_strict_and_api_csp_unchanged` |
 
 LLM-specific threats follow the OWASP Top 10 for LLM Applications (2025); see §4.
 
@@ -65,6 +67,8 @@ LLM-specific threats follow the OWASP Top 10 for LLM Applications (2025); see §
 | SR12 | Errors fail closed and reveal nothing internal | `SEC-ERROR-HANDLING` | `api.py`, `crypto.py` |
 | SR13 | Responses carry security headers | `SEC-HEADERS` | `api.py` |
 | SR14 | Production refuses to start without keys | `SEC-CRYPTO`, `SEC-AUTHN` | `crypto.py`, `api.py` |
+| SR15 | The web UI never renders untrusted text as HTML, and runs under a same-origin CSP with no inline code | `OWASP-LLM05`, `SEC-HEADERS` | `finrag/web/js/dom.js`, `api.py` middleware |
+| SR16 | The UI keeps the API key only in `sessionStorage`, never in URLs, cookies or `localStorage`, and clears conversations on sign-out | `SEC-SECRETS`, `GDPR-ART5-1E` | `finrag/web/js/api.js`, `views/ask.js` |
 
 ## 4. OWASP Top 10 for LLM Applications (2025)
 
@@ -103,6 +107,8 @@ but keep `dpo` separate from `analyst` where possible (segregation of duties).
 | purge expired | | | ✔ | ✔ |
 
 Denied attempts are written to the audit log as `outcome: denied`.
+
+**Web UI session.** There are no cookies, so cross-site request forgery does not apply: the browser never attaches the key on its own. The key sits in `sessionStorage`, which any script in the page could read; the CSP and the ban on HTML sinks are what prevent such a script from running. Sign-out clears the key and the in-memory conversation.
 
 **Known gap.** The API-key file is read once at start-up. Revoking a key requires a
 restart. There is no key expiry, per-key rate-limit state across processes, or SSO.
@@ -203,6 +209,8 @@ Do not open a public issue. Follow the contact process in the root
 ## 12. Open security work (Proposed)
 
 - Independent penetration test and a prompt-injection red-team suite.
+- Short-lived session tokens instead of keeping the long-lived API key in the browser tab; SSO.
+- Subresource and header checks for the UI in CI (for example a CSP evaluator).
 - NER-based PII detection for higher recall.
 - Key revocation without restart; key expiry; SSO.
 - Hash-pinned dependencies and SBOM generation.

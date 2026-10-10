@@ -30,7 +30,9 @@ OUTPUT = ROOT / "docs" / "COMPLIANCE_MATRIX.md"
 def collect() -> dict[str, list[str]]:
     """Map rule id -> sorted list of 'path:line' locations."""
     found: dict[str, list[str]] = defaultdict(list)
-    for path in sorted((ROOT / "finrag").rglob("*.py")):
+    # Python sources plus the web UI (JavaScript and HTML carry tags in comments too).
+    sources = [p for p in (ROOT / "finrag").rglob("*") if p.suffix in (".py", ".js", ".html")]
+    for path in sorted(sources):
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for rule in TAG.findall(line):
                 found[rule].append(f"{path.relative_to(ROOT).as_posix()}:{lineno}")

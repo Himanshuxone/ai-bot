@@ -20,10 +20,12 @@ plain HTTP to the internet.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from finrag.config import get_settings
@@ -74,7 +76,16 @@ async def security_middleware(request: Request, call_next):  # type: ignore[no-u
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Cache-Control"] = "no-store"
-    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    # The JSON API gets the strictest policy. The browser UI (static files under
+    # /ui) may load only same-origin scripts, styles and images: no inline code,
+    # no third-party hosts, no framing (also limits XSS impact on the API key).
+    if request.url.path.startswith("/ui"):
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+            "connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'none'; "
+            "form-action 'none'; frame-ancestors 'none'")
+    else:
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
     # [RULE: EUAIA-ART50] Machine-readable disclosure that responses are AI-assisted.
     response.headers["X-AI-Generated"] = "true"
     return response
@@ -148,6 +159,33 @@ class SubjectRequest(BaseModel):
 def healthz() -> dict[str, str]:
     """Liveness probe (no auth, no data)."""
     return {"status": "ok"}
+
+
+@app.get("/v1/me")
+def me(principal: PrincipalDep) -> dict[str, object]:
+    """Who am I and what may I do? Used by the web UI to show only allowed actions.
+
+    [RULE: SEC-AUTHN] Doubles as the API-key check at sign-in.
+    [RULE: SEC-AUTHZ] The UI hides actions the role lacks; the server still enforces
+                      every permission, so hiding is convenience, not security.
+    """
+    return {
+        "principal": principal.principal_id,
+        "tenant": principal.tenant,
+        "roles": sorted(principal.roles),
+        "permissions": sorted(p.value for p in principal.permissions),
+        "provider": settings.llm_provider.value,
+        "model": pipeline.generator.model_name,
+        "options": {
+            "lawful_bases": [b.value for b in gdpr.LawfulBasis],
+            "purposes": [p.value for p in gdpr.Purpose],
+            "art9_conditions": [c.value for c in gdpr.Art9Condition],
+            "extensions": [".pdf", ".xlsx", ".csv", ".txt", ".md"],
+            "max_upload_bytes": settings.max_upload_bytes,
+            "max_query_chars": settings.max_query_chars,
+            "default_retention_days": settings.default_retention_days,
+        },
+    }
 
 
 @app.get("/v1/transparency")
@@ -239,3 +277,16 @@ def ropa(principal: PrincipalDep) -> dict[str, object]:
     """Record of processing activities (Art. 30)."""
     principal.require(Permission.VIEW_AUDIT)
     return gdpr.records_of_processing(settings)
+
+
+# ------------------------------------------------------------------- web UI
+WEB_DIR = Path(__file__).parent / "web"
+
+if settings.web_ui and WEB_DIR.is_dir():
+    # [RULE: SEC-HEADERS] Served with the UI-specific CSP set in the middleware.
+    app.mount("/ui", StaticFiles(directory=WEB_DIR, html=True), name="ui")
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        """Send browsers to the web app."""
+        return RedirectResponse("/ui/")
