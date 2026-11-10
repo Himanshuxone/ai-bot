@@ -334,6 +334,7 @@ Controls are tagged in comments, for example:
 | [docs/project/Design_System.md](docs/project/Design_System.md) | Design principles, tokens and component rules behind the web UI |
 | [docs/project/GoToMarket.md](docs/project/GoToMarket.md) | How to sell it: customers, positioning, packaging and pricing hypotheses, sales process, marketing plan, objection handling |
 | [docs/DEPLOY_VERCEL.md](docs/DEPLOY_VERCEL.md) | Deploying the public demo on Vercel: files, environment variables, verification, troubleshooting, limits |
+| [docs/diagrams/rag_flow.drawio](docs/diagrams/rag_flow.drawio) | Editable draw.io diagram of the whole RAG flow (ingestion, stores, query), with function and file names. Open it at app.diagrams.net (File → Open from → Device) |
 | [docs/RAG_FLOW.md](docs/RAG_FLOW.md) | UML class, activity and sequence diagrams plus a user flow, mapping every RAG step (chunking, vectorising, matching, LLM call) to its function and file |
 | [docs/COMPLIANCE.md](docs/COMPLIANCE.md) | Article-by-article explanation for GDPR, EU AI Act, PII standard, OWASP LLM Top 10, AppSec, plus the organisational measures you still need |
 | [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) | Generated table: every rule → every `file:line` that implements it |

@@ -1,5 +1,7 @@
 # RAG Flow: UML and User-Flow Diagrams
 
+> An editable draw.io version of the whole flow is in [diagrams/rag_flow.drawio](diagrams/rag_flow.drawio) (open it at app.diagrams.net).
+
 This page traces every RAG step in FinRAG to the function and file that performs it:
 loading, chunking, "embedding" (vectorising), storing, retrieving, sending to the LLM,
 and checking the answer.
